@@ -14,7 +14,8 @@ Meribuck "Harrison Wang" Brandybuck (hbw2118)
 ## Notes
 
 If you run into an error with /usr/share/dict/words, please try:
-`sudo apt-get install --reinstall wamerican`
+
+```sudo apt-get install --reinstall wamerican```
 
 Missing libssl-dev:
 
