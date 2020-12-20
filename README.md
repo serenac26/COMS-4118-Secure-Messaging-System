@@ -19,6 +19,7 @@ If you run into an error with /usr/share/dict/words, please try:
 Missing libssl-dev:
 
 ```fatal error: openssl/ssl.h: No such file or directory```
+
 ```sudo apt-get install libssl-dev```
 
 
