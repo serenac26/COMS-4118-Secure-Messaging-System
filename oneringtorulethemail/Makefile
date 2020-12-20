@@ -5,17 +5,18 @@ ODIR=obj
 LDIR =../lib
 
 LIBS=-lm
+LDLIBS=
 
 install: pemithor boromail faramail
 
 pemithor: pemithor.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+	$(CC) $^ $(LDLIBS) -o $@ $(CFLAGS) $(LIBS)
 
 boromail: boromail.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+	$(CC) $^ $(LDLIBS) -o $@ $(CFLAGS) $(LIBS)
 
 faramail: faramail.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+	$(CC) $^ $(LDLIBS) -o $@ $(CFLAGS) $(LIBS)
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)

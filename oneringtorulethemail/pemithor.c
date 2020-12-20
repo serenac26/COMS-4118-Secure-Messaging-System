@@ -4,6 +4,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <openssl/ssl.h>
+
 #define DEBUG 1
 #define BOROMAIL "boromail"
 #define FARAMAIL "faramail"
@@ -65,4 +67,5 @@ int main(int mama, char **moo)
       execv("./faramail", moonbyul);
     }
   }
+  p("Pemithor died successfully\n");
 }
