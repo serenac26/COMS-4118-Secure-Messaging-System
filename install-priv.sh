@@ -6,9 +6,10 @@ groupadd -f ring
 groupadd -f goot 
 groupadd -f loot 
 groupadd -f poot 
-groupadd -f voot 
 groupadd -f mint 
 groupadd -f mout
+groupadd -f vsin 
+groupadd -f vuse 
 
 # chown -hR root:root $1/server
 chown -hR root:ring $1/client
