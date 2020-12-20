@@ -18,5 +18,5 @@ If you run into an error with /usr/share/dict/words, please try:
 
 
 TODO:
-uncomment line "# chown -hR root:root $1/server" in install-priv.sh
-remove line "echo "$cred" >> creds.txt" and in install-unpriv.sh
+uncomment line "# chown -hR root:root $1/server" in install-priv.sh \
+remove line "echo "$cred" >> creds.txt" in install-unpriv.sh
