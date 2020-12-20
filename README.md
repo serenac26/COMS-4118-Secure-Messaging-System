@@ -7,3 +7,16 @@ William "Samgee Gamgee" Chiu (wnc2105)
 Stacy "Pook Took" Tao (syt2111)
 
 Meribuck "Harrison Wang" Brandybuck (hbw2118)
+
+
+`make install TREE=<name>`
+
+
+If you run into an error with /usr/share/dict/words, please try:
+`sudo apt-get install --reinstall wamerican`
+
+
+
+TODO:
+uncomment line "# chown -hR root:root $1/server" in install-priv.sh
+remove line "echo "$cred" >> creds.txt" and in install-unpriv.sh
