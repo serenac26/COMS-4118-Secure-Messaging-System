@@ -4,19 +4,18 @@ CFLAGS=-I.
 ODIR=obj
 LDIR =../lib
 
-LIBS=-lm
-LDLIBS=
+LIBS=-lm -lssl -lcrypto
 
 install: pemithor boromail faramail
 
 pemithor: pemithor.o
-	$(CC) $^ $(LDLIBS) -o $@ $(CFLAGS) $(LIBS)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 boromail: boromail.o
-	$(CC) $^ $(LDLIBS) -o $@ $(CFLAGS) $(LIBS)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 faramail: faramail.o
-	$(CC) $^ $(LDLIBS) -o $@ $(CFLAGS) $(LIBS)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)

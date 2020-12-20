@@ -11,9 +11,13 @@ Meribuck "Harrison Wang" Brandybuck (hbw2118)
 
 `make install TREE=<name>`
 
+## Notes
 
 If you run into an error with /usr/share/dict/words, please try:
 `sudo apt-get install --reinstall wamerican`
+
+fatal error: openssl/ssl.h: No such file or directory
+`sudo apt-get install libssl-dev`
 
 
 
