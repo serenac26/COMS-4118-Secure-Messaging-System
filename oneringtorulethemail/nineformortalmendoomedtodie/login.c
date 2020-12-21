@@ -8,15 +8,17 @@ const char *HASHEDPW_SUFFIX = ".hashedpw";
 int main(int argc, char *argv[])
 {
     char *c;
-    char *username = argv[1];
-    char *pw = argv[2];
+    char *username;
+    char *pw;
     char hashedpw_file[100];
     char hashedpw[256];
     FILE *fp;
     if (argc != 3) {
-        fprintf(stderr, "bad arg count; usage: login <username> <password> <treedir>\n");
+        fprintf(stderr, "bad arg count; usage: login <username> <password>\n");
         return 1;
     }
+    username = argv[1];
+    pw = argv[2];
     sprintf(hashedpw_file, "%s/%s%s", HASHEDPW_PATH, username, HASHEDPW_SUFFIX);
     fp = fopen(hashedpw_file, "r");
     if (!fp) {
