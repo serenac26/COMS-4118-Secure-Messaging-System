@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     sprintf(mailbox_path, "%s/%s", MAIL_PATH, username);
     dp = opendir(mailbox_path);
     if (!dp) {
-        printf("%s\n", mailbox_path);
+        fprintf(stderr, "%s\n", mailbox_path);
         perror("Directory open error");
         return 1;
     }
