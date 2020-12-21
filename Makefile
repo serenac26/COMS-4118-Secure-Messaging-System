@@ -6,7 +6,7 @@ NINERINGS = ./oneringtorulethemail/nineformortalmendoomedtodie
 INCLUDES = -I$(BSTRDIR)
 BSTROBJS = bstrlib.o bstrlibext.o
 DEFINES =
-LFLAGS = -L/usr/lib/ -L./bstrlib -lm -lcrypt
+LFLAGS = -L/usr/lib/ -L./bstrlib -lm -lssl -lcrypt -lcrypto
 CFLAGS = -O3 -Wall -pedantic -ansi -s $(DEFINES) -std=c99 -g -D_GNU_SOURCE
 
 install: install-unpriv scripts install-priv servercomponents
@@ -54,6 +54,12 @@ changepw: changepw.o
 verifysign: verifysign.o
 	echo Linking: $@
 	$(CC) $< -o $@ $(LFLAGS)
+
+signmsg: signmsg.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
+
+signmsg.o: signmsg.c
 
 %.o: $(NINERINGS)/%.c
 	echo Compiling: $<
