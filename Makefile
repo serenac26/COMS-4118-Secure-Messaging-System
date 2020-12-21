@@ -48,7 +48,7 @@ login: login.o
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f mail-in mail-out *.o
+	rm -f mail-in mail-out login *.o
 
 .PHONY : all
 .PHONY : install
