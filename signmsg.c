@@ -31,7 +31,7 @@ int main(int argc, char **argv)
      * streaming detached set CMS_DETACHED|CMS_STREAM for streaming
      * non-detached set CMS_STREAM
      */
-    int flags = CMS_DETACHED | CMS_STREAM | CMS_TEXT;
+    int flags = CMS_DETACHED | CMS_STREAM;
 
     if (argc != 5) {
         fprintf(stderr, "bad arg count; usage: signmsg <msgin> <certificatefile> <msgout>\n");
