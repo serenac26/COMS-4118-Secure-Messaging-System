@@ -1,9 +1,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
-#include "utils.h"
 #include <crypt.h>
-// char *crypt_gensalt(const char *prefix, unsigned long count, const char *rbytes, int nrbytes);
+#include "utils.h"
 
 int main(int argc, char *argv[])
 {
