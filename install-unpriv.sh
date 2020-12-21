@@ -19,7 +19,7 @@ for f in /home/mailbox/*; do
     cred="$(python3 $pwd/crypt-pw.py ${f:14})"
     credarray=($cred)
     echo "$cred" >> creds.txt
-    echo "${credarray[1]}" >> server/private/credentials/${f:14}.hashedpw
+    printf "${credarray[1]}" >> server/private/credentials/${f:14}.hashedpw
 done
 
 mkdir client/bin client/private 

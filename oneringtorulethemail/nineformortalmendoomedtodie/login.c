@@ -22,17 +22,17 @@ int main(int argc, char *argv[])
     sprintf(hashedpw_file, "%s/%s%s", HASHEDPW_PATH, username, HASHEDPW_SUFFIX);
     fp = fopen(hashedpw_file, "r");
     if (!fp) {
-        printf("%s\n", hashedpw_file);
-        perror ("File open error");
+        fprintf(stderr, "%s\n", hashedpw_file);
+        perror("File open error");
         return 1;
     }
     if (!fgets(hashedpw, sizeof(hashedpw), fp)) {
-        printf("%s\n", hashedpw_file);
-        printf("File read error\n");
+        fclose(fp);
+        fprintf(stderr, "%s\n", hashedpw_file);
+        perror("File read error");
         return 1;
     }
     fclose(fp);
-    strtok(hashedpw, "\n");
     c = crypt(pw, hashedpw);
     if (strcmp(c, hashedpw) == 0) {
         printf("ok\n");
