@@ -2,8 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <dirent.h>
-
-const char *MAIL_PATH = "../mail";
+#include "utils.h"
 
 int main(int argc, char *argv[])
 {
