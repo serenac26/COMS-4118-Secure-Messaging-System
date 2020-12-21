@@ -36,7 +36,7 @@ mail-out: mail-out.o $(BSTROBJS)
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-servercomponents: login checkmail #changepw
+servercomponents: login checkmail changepw
 	cp $^ $(TREE)/server/bin
 
 login: login.o

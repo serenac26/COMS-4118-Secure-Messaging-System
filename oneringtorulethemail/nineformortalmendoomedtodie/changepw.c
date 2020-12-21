@@ -29,11 +29,7 @@ int main(int argc, char *argv[])
         perror("File open error");
         return 1;
     }
-    if (fputs(hashedpw, fp) != strlen(hashedpw)) {
-        fprintf(stderr, "%s\n", hashedpw_file);
-        fprintf(stderr, "File write error\n");
-        return 1;
-    }
+    fputs(hashedpw, fp);
     fclose(fp);
     return 0;
 }
