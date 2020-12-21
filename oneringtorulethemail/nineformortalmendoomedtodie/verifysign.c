@@ -15,11 +15,12 @@
 
 int main(int argc, char **argv)
 {
-    BIO *in = NULL, *out = NULL, *tbio = NULL,/* *tbio = NULL, *senderbio = NULL,*/ *cont = NULL;
+    BIO *in = NULL, *out = NULL, *rootbio = NULL, *intmbio = NULL, *senderbio = NULL, *cont = NULL;
     X509_STORE *st = NULL;
     X509 *rootcert = NULL;
     X509 *intermedcert = NULL;
     X509 *sendercert = NULL;
+    STACK_OF(X509) *certs;
     CMS_ContentInfo *cms = NULL;
 
     char *sender;
@@ -47,12 +48,12 @@ int main(int argc, char **argv)
     st = X509_STORE_new();
 
     /* Read in certificates */
-    tbio = BIO_new_file(ROOT_CERTIFICATE, "r");
+    rootbio = BIO_new_file(ROOT_CERTIFICATE, "r");
 
-    if (!tbio)
+    if (!rootbio)
         goto err;
 
-    rootcert = PEM_read_bio_X509(tbio, NULL, 0, NULL);
+    rootcert = PEM_read_bio_X509(rootbio, NULL, 0, NULL);
 
     if (!rootcert)
         goto err;
@@ -60,13 +61,12 @@ int main(int argc, char **argv)
     if (!X509_STORE_add_cert(st, rootcert))
         goto err;
 
-    // TODO: add intermediate, and sender certs to store
-    tbio = BIO_new_file(INTERMED_CERTIFICATE, "r");
+    intmbio = BIO_new_file(INTERMED_CERTIFICATE, "r");
 
-    if (!tbio)
+    if (!intmbio)
         goto err;
 
-    intermedcert = PEM_read_bio_X509(tbio, NULL, 0, NULL);
+    intermedcert = PEM_read_bio_X509(intmbio, NULL, 0, NULL);
 
     if (!intermedcert)
         goto err;
@@ -75,18 +75,27 @@ int main(int argc, char **argv)
         goto err;
 
     sprintf(sender_cert_path, "%s/%s%s", CERT_PATH, sender, CERT_SUFFIX);
-    tbio = BIO_new_file(sender_cert_path, "r");
 
-    if (!tbio)
+    senderbio = BIO_new_file(sender_cert_path, "r");
+
+    if (!senderbio)
         goto err;
 
-    sendercert = PEM_read_bio_X509(tbio, NULL, 0, NULL);
+    sendercert = PEM_read_bio_X509(senderbio, NULL, 0, NULL);
 
     if (!sendercert)
         goto err;
 
     if (!X509_STORE_add_cert(st, sendercert))
         goto err;
+
+    // add sender certificate to list of certificates to check
+    if ((certs = sk_X509_new_null()) == NULL)
+		goto err;
+    
+    if ((sk_X509_push(certs, sendercert)) == 0) {
+        goto err;
+    }
 
     /* Open message being verified */
 
@@ -106,8 +115,7 @@ int main(int argc, char **argv)
     if (!out)
         goto err;
 
-    // TODO: replace NULL with sender certificate and add CMS_NOINTERN flag
-    if (!CMS_verify(cms, sendercert, st, cont, out, CMS_NOINTERN)) {
+    if (!CMS_verify(cms, certs, st, cont, out, CMS_NOINTERN)) {
         fprintf(stderr, "Verification Failure\n");
         goto err;
     }
@@ -123,12 +131,16 @@ int main(int argc, char **argv)
         ERR_print_errors_fp(stderr);
     }
 
+    X509_STORE_free(st);
     CMS_ContentInfo_free(cms);
+    sk_X509_pop_free(certs, X509_free);
     X509_free(rootcert);
     X509_free(intermedcert);
-    X509_free(sendercert);
     BIO_free(in);
     BIO_free(out);
-    BIO_free(tbio);
+    BIO_free(cont);
+    BIO_free(rootbio);
+    BIO_free(intmbio);
+    BIO_free(senderbio);
     return ret;
 }
