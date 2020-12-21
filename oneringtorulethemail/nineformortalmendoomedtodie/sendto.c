@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include "utils.h"
 
-// probably need to move this directly into boromail as a helper function
+// cannot use this program on its own
+// need to move this directly into boromail as a helper function
 
 int main(int argc, char *argv[])
 {
