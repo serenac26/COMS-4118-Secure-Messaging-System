@@ -1,3 +1,15 @@
+#include <unistd.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include "bstrlib.h"
+#include "utf8util.h"
+#include "buniutil.h"
+#include "bstraux.h"
+#include "bsafe.h"
+#include "bstrlibext.h"
+
 #define HASHEDPW_PATH "../private/credentials"
 #define HASHEDPW_SUFFIX ".hashedpw"
 
@@ -10,3 +22,35 @@
 
 #define ROOT_CERTIFICATE "../ca/certs/ca.cert.pem"
 #define INTERMED_CERTIFICATE "../ca/intermediate/certs/intermediate.cert.pem"
+
+#define FROM "From: "
+#define TO "To: "
+
+#define GB 1000000000
+#define MB 1000000
+
+#define p(...)           \
+  if (DEBUG)             \
+  {                      \
+    printf(__VA_ARGS__); \
+  }
+
+struct Node
+{
+  bstring str;
+  struct Node *next;
+};
+
+struct Node *createList();
+
+int freeList(struct Node *list);
+
+int inList(struct Node *list, bstring str);
+
+int prependList(struct Node **list, bstring str);
+
+int appendList(struct Node **list, bstring str);
+
+bstring printList(struct Node *list);
+
+int getMessageFilename(bstring recip, bstring filename);

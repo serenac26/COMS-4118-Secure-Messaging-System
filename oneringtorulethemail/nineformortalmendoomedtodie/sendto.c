@@ -6,31 +6,34 @@
 // cannot use this program on its own
 // need to move this directly into boromail as a helper function
 
-int main(int argc, char *argv[])
+struct Node *recipientcerts(struct Node *recipients)
 {
-    char *certs[argc];
-    for (int i = 1; i < argc; i++) {
-        char *recipient = argv[i];
+    struct Node *certs = createList();
+    struct Node *curr = recipients;
+    while (curr != NULL) {
+        bstring recipient = curr->str;
         char cert_path[100];
+        char buf[MAX_CERT_SIZE];
+        bstring cert;
         FILE *fp;
-        certs[i] = malloc(MAX_CERT_SIZE);
-        if (!certs[i]) {
-            perror("malloc error");
-            return 1;
-        }
-        sprintf(cert_path, "%s/%s%s", CERT_PATH, recipient, CERT_SUFFIX);
-        fp = fopen(cert_path);
+        sprintf(cert_path, "%s/%s%s", CERT_PATH, recipient->data, CERT_SUFFIX);
+        fp = fopen(cert_path, "r");
         if (!fp) {
             fprintf(stderr, "%s\n", cert_path);
             perror("File open error");
-            return 1;
+            appendList(&certs, NULL);
+            continue;
         }
-        if (!fgets(certs[i], sizeof(MAX_CERT_SIZE), fp)) {
+        if (!fgets(buf, sizeof(MAX_CERT_SIZE), fp)) {
             fprintf(stderr, "%s\n", cert_path);
             perror("File read error");
-            return 1;
+            appendList(&certs, NULL);
+            continue;
         }
+        cert = bfromcstr(buf);
+        appendList(&certs, cert);
     }
-    //return certs;
-    return 0;
+    return certs;
 }
+
+int main() {return 0;}
