@@ -36,7 +36,7 @@ mail-out: mail-out.o $(BSTROBJS)
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-servercomponents: login checkmail
+servercomponents: login checkmail #changepw
 	cp $^ $(TREE)/server/bin
 
 login: login.o
@@ -47,12 +47,16 @@ checkmail: checkmail.o
 	echo Linking: $@
 	$(CC) $< -o $@ $(LFLAGS)
 
+changepw: changepw.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
+
 %.o: $(NINERINGS)/%.c
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f mail-in mail-out login checkmail *.o
+	rm -f mail-in mail-out login checkmail changepw *.o
 
 .PHONY : all
 .PHONY : install
