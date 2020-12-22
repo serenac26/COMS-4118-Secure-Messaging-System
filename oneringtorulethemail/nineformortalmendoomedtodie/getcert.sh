@@ -7,10 +7,6 @@
 
 # TODO: add TLS+encryption+signing roles for usr_cert configuration
 
-# client creates CSR with its private key:
-# openssl req -config $cacnf -nodes \
-#   -key $clientprivkey -out $clientreq
-
 username=$1
 clientreq=$2
 #intermedcert=
