@@ -12,13 +12,16 @@ DEFINES =
 LFLAGS = -L/usr/lib/ -L./bstrlib -lm -lssl -lcrypt -lcrypto
 CFLAGS = -O3 -Wall -pedantic -ansi -s $(DEFINES) -std=c99 -g -D_GNU_SOURCE
 
-install: install-unpriv server servercomponents client install-priv 
+install: install-unpriv server servercomponents client gen-certs install-priv 
 
 install-unpriv:
 	./install-unpriv.sh $(TREE)
 
 install-priv:
 	sudo ./install-priv.sh $(TREE)
+
+gen-certs:
+	sudo ./gen-certs.sh $(TREE)
 
 %.o : $(BSTRDIR)/%.c
 	echo Compiling: $<
@@ -112,4 +115,5 @@ clean:
 .PHONY : install
 .PHONY : install-unpriv
 .PHONY : install-priv
+.PHONY : gen-certs
 .PHONY : clean
