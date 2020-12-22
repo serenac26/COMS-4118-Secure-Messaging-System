@@ -7,6 +7,7 @@ GOLLUM = ./gollum
 INCLUDES = -I$(BSTRDIR)
 BSTROBJS = bstrlib.o bstrlibext.o
 SERVERUTILS = utils.o faramailutils.o boromailutils.o
+CLIENTUTILS = utils.o
 DEFINES =
 LFLAGS = -L/usr/lib/ -L./bstrlib -lm -lssl -lcrypt -lcrypto
 CFLAGS = -O3 -Wall -pedantic -ansi -s $(DEFINES) -std=c99 -g -D_GNU_SOURCE
@@ -66,6 +67,14 @@ verifysign: verifysign.o
 msgout: msgout.o $(SERVERUTILS) $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+
+send-msg: send-msg.o $(CLIENTUTILS) $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< $(CLIENTUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+
+recv-msg: recv-msg.o $(CLIENTUTILS) $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< $(CLIENTUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
 # End testing
 	
 client: signmsg encryptmsg decryptmsg
@@ -90,7 +99,7 @@ decryptmsg: decryptmsg.o
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg *.o
+	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg send-msg recv-msg *.o
 
 .PHONY : all
 .PHONY : install
