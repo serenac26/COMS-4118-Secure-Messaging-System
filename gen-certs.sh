@@ -1,21 +1,28 @@
 #!/bin/bash
 
+rsapass=$(head -c 100 /dev/urandom | tr -dc 'a-zA-Z0-9+_-')
+
+pwd=$(pwd)
+
+cp rootopenssl.cnf $1/server/ca/rootopenssl.cnf
+cp imopenssl.cnf $1/server/ca/imopenssl.cnf
+
+cd $1/server/ca
+
 rootcnf=rootopenssl.cnf
+imcnf=imopenssl.cnf
 
-dir=$1/server
-rsapass=($head -c 100 /dev/urandom | tr -dc 'a-zA-Z0-9+_-')
+touch index.txt
+echo 1000 >serial
 
-touch $dir/ca/index.txt
-echo 1000 > $dir/ca/serial
-
-rootrsa=$dir/private/root/ca.key.pem
+rootrsa=private/ca.key.pem
 echo "generate root RSA key and store in read-only file $rootrsa"
 openssl genrsa -aes256 -out $rootrsa -passout pass:$rsapass 4096
 chmod 400 $rootrsa
 
 echo _________________________________________________________________________________________
 
-rootcert=$dir/ca/certs/ca.cert.pem
+rootcert=certs/ca.cert.pem
 echo "generate self-signed root certificate from root RSA key \
 and store in read-only file $rootcert"
 openssl req -config $rootcnf \
@@ -33,19 +40,19 @@ openssl x509 -noout -text -in $rootcert
 
 echo _________________________________________________________________________________________
 
-imdir=$dir/ca/intermediate
-touch $imdir/index.txt
-echo 1000 > $imdir/serial
+im=intermediate
 
-imcnf=imopenssl.cnf
-imrsa=$dir/private/intermediate/intermediate.key.pem
+touch $im/index.txt
+echo 1000 > $im/serial
+
+imrsa=$im/private/intermediate.key.pem
 echo "generate intermediate RSA key and store in read-only file $imrsa"
 openssl genrsa -aes256 -out $imrsa -passout pass:$rsapass 4096
 chmod 400 $imrsa
 
 echo _________________________________________________________________________________________
 
-imreq=$imdir/csr/intermediate.csr.pem
+imreq=$im/csr/intermediate.csr.pem
 echo "create intermediate certificate signing request with intermediate RSA key $imreq"
 openssl req -config $imcnf -new -sha256 \
     -passin pass:$rsapass \
@@ -55,7 +62,7 @@ openssl req -config $imcnf -new -sha256 \
 
 echo _________________________________________________________________________________________
 
-imcert=$imdir/certs/intermediate.cert.pem
+imcert=$im/certs/intermediate.cert.pem
 echo "sign intermediate certificate with root certificate and store in $imcert"
 openssl ca -batch -config $rootcnf -extensions v3_intermediate_ca \
     -passin pass:$rsapass \
@@ -71,21 +78,21 @@ openssl verify -CAfile $rootcert $imcert
 
 echo _________________________________________________________________________________________
 
-cachain=$imdir/certs/ca-chain.cert.pem
+cachain=$im/certs/ca-chain.cert.pem
 echo "create certificate chain file $cachain"
 cat $imcert $rootcert > $cachain
 chmod 444 $cachain
 
 echo _________________________________________________________________________________________
 
-bserverrsa=$dir/private/servers/boromail.key.pem
+bserverrsa=$im/private/boromail.key.pem
 echo "generate boromail web server RSA key"
 openssl genrsa -aes256 -out $bserverrsa -passout pass:$rsapass 2048
 chmod 400 $bserverrsa
 
 echo _________________________________________________________________________________________
 
-bserverreq=$imdir/csr/boromail.csr.pem
+bserverreq=$im/csr/boromail.csr.pem
 echo "create boromail web server CSR with web server RSA key $bserverreq"
 openssl req -config $imcnf -new -sha256 \
     -passin pass:$rsapass \
@@ -95,7 +102,7 @@ openssl req -config $imcnf -new -sha256 \
 
 echo _________________________________________________________________________________________
 
-bservercert=$imdir/certs/boromail.cert.pem
+bservercert=$im/certs/boromail.cert.pem
 echo "sign boromail web server certificate with intermediate certificate"
 openssl ca -batch -config $imcnf -extensions server_cert \
     -passin pass:$rsapass \
@@ -112,14 +119,14 @@ openssl verify -CAfile $cachain $bservercert
 
 echo _________________________________________________________________________________________
 
-fserverrsa=$dir/private/servers/faramail.key.pem
+fserverrsa=$im/private/faramail.key.pem
 echo "generate faramail web server RSA key"
 openssl genrsa -aes256 -out $fserverrsa -passout pass:$rsapass 2048
 chmod 400 $fserverrsa
 
 echo _________________________________________________________________________________________
 
-fserverreq=$imdir/csr/faramail.csr.pem
+fserverreq=$im/csr/faramail.csr.pem
 echo "create faramail web server CSR with web server RSA key $fserverreq"
 openssl req -config $imcnf -new -sha256 \
     -passin pass:$rsapass \
@@ -129,7 +136,7 @@ openssl req -config $imcnf -new -sha256 \
 
 echo _________________________________________________________________________________________
 
-fservercert=$imdir/certs/faramail.cert.pem
+fservercert=$im/certs/faramail.cert.pem
 echo "sign faramail web server certificate with intermediate certificate"
 openssl ca -batch -config $imcnf -extensions server_cert \
     -passin pass:$rsapass \
@@ -143,3 +150,7 @@ echo ___________________________________________________________________________
 echo "verify faramail web server certificate"
 openssl x509 -noout -text -in $fservercert
 openssl verify -CAfile $cachain $fservercert
+
+cd $pwd
+rm $1/server/ca/rootopenssl.cnf
+rm $1/server/ca/imopenssl.cnf

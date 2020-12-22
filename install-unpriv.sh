@@ -9,17 +9,19 @@ mkdir "$1"
 cd $1
 
 mkdir server client
+mkdir server/bin server/mail server/ca server/credentials
 
-mkdir server/bin server/mail server/ca server/private
-mkdir server/ca/certs server/ca/intermediate server/ca/newcerts
-mkdir server/ca/intermediate/certs server/ca/intermediate/csr server/ca/intermediate/newcerts
-mkdir server/private/intermediate server/private/root server/private/credentials
+ca=server/ca
+im=$ca/intermediate
+
+mkdir $ca/certs $ca/intermediate $ca/newcerts $ca/private
+mkdir $im/certs $im/csr $im/newcerts $im/private
 
 for f in /home/mailbox/*; do
     cred="$(python3 $pwd/crypt-pw.py ${f:14})"
     credarray=($cred)
     echo "$cred" >> creds.txt
-    echo "${credarray[1]}" >> server/private/credentials/${f:14}.hashedpw
+    printf "${credarray[1]}" >> server/credentials/${f:14}.hashedpw
 done
 
 mkdir client/bin client/private 
