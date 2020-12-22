@@ -10,7 +10,7 @@
 #include "bsafe.h"
 #include "bstrlibext.h"
 
-#define HASHEDPW_PATH "../private/credentials"
+#define HASHEDPW_PATH "../credentials"
 #define HASHEDPW_SUFFIX ".hashedpw"
 
 #define MAIL_PATH "../mail"
