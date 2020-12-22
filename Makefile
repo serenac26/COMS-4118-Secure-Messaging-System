@@ -2,7 +2,9 @@ CC = gcc
 LD = gcc
 
 BSTRDIR = ./bstrlib
-NINERINGS = ./oneringtorulethemail/nineformortalmendoomedtodie
+ONERING = ./oneringtorulethemail
+NINERINGS = $(ONERING)/nineformortalmendoomedtodie
+GOLLUM = ./gollum
 INCLUDES = -I$(BSTRDIR)
 BSTROBJS = bstrlib.o bstrlibext.o
 SERVERUTILS = utils.o
@@ -10,7 +12,7 @@ DEFINES =
 LFLAGS = -L/usr/lib/ -L./bstrlib -lm -lssl -lcrypt -lcrypto
 CFLAGS = -O3 -Wall -pedantic -ansi -s $(DEFINES) -std=c99 -g -D_GNU_SOURCE
 
-install: install-unpriv install-priv servercomponents userhelpers
+install: install-unpriv server servercomponents client install-priv 
 
 install-unpriv:
 	./install-unpriv.sh $(TREE)
@@ -26,8 +28,27 @@ install-priv:
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-servercomponents: login checkmail verifysign sendto msgin changepw
-	cp $^ $(TREE)/server/bin
+server: pemithor boromail faramail
+	mv $^ $(TREE)/server/bin
+
+pemithor: pemithor.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
+	
+boromail: boromail.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
+
+faramail: faramail.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
+
+%.o: $(ONERING)/%.c
+	echo Compiling: $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+servercomponents: login checkmail verifysign sendto msgin msgout changepw
+	mv $^ $(TREE)/server/bin
 	cp $(NINERINGS)/getcert.sh $(TREE)/server/bin
 
 login: login.o
@@ -54,20 +75,36 @@ msgin: msgin.o $(SERVERUTILS) $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
 
-userhelpers: signmsg
+msgout: msgout.o $(SERVERUTILS) $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+	
+%.o: $(NINERINGS)/%.c
+	echo Compiling: $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+client: signmsg encryptmsg decryptmsg
+	sudo mv $^ $(TREE)/client/bin
+	sudo cp $(GOLLUM)/makecsr.sh $(TREE)/client/bin
 
 signmsg: signmsg.o
 	echo Linking: $@
 	$(CC) $< -o $@ $(LFLAGS)
 
-signmsg.o: signmsg.c
+encryptmsg: encryptmsg.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
 
-%.o: $(NINERINGS)/%.c
+decryptmsg: decryptmsg.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
+
+%.o: $(GOLLUM)/%.c
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f login checkmail changepw verifycert verifysign sendto msgin msgout signmsg *.o
+	rm -f pemithor boromail faramail login checkmail changepw verifycert verifysign sendto msgin msgout signmsg encryptmsg decryptmsg *.o
 
 .PHONY : all
 .PHONY : install
