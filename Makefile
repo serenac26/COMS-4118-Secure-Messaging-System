@@ -91,7 +91,7 @@ decryptmsg: decryptmsg.o
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f pemithor boromail faramail login checkmail changepw verifycert verifysign sendto msgin msgout signmsg encryptmsg decryptmsg *.o
+	rm -f pemithor boromail faramail verifysign sendto msgin msgout signmsg encryptmsg decryptmsg *.o
 
 .PHONY : all
 .PHONY : install
