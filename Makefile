@@ -47,9 +47,10 @@ faramail: faramail.o
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-servercomponents: login checkmail verifysign sendto msgin changepw
-	mv $^ $(TREE)/server/bin
-	cp $(NINERINGS)/getcert.sh $(TREE)/server/bin
+servercomponents: login checkmail verifysign sendto msgin #changepw
+	sudo mv $^ $(TREE)/server/bin
+	sudo cp $(NINERINGS)/getcert.sh $(TREE)/server/bin
+	sudo cp imopenssl.cnf $(TREE)/server
 
 login: login.o
 	echo Linking: $@
@@ -81,7 +82,8 @@ msgin: msgin.o $(SERVERUTILS) $(BSTROBJS)
 
 client: signmsg encryptmsg decryptmsg
 	sudo mv $^ $(TREE)/client/bin
-	sudo cp $(GOLLUM)/makecsr.sh $(TREE)/client/bin
+	sudo cp $(GOLLUM)/makecsr.sh $(GOLLUM)/genkey.sh $(TREE)/client/bin
+	sudo cp imopenssl.cnf $(TREE)/client
 
 signmsg: signmsg.o
 	echo Linking: $@

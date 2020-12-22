@@ -1,0 +1,1 @@
+openssl genrsa -aes256 -passout pass:$1 -out $2 2048

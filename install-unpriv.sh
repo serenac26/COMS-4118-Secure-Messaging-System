@@ -12,8 +12,12 @@ mkdir server client
 
 mkdir server/bin server/mail server/ca server/private
 mkdir server/ca/certs server/ca/intermediate server/ca/newcerts
-mkdir server/ca/intermediate/certs server/ca/intermediate/csr server/ca/intermediate/newcerts
-mkdir server/private/intermediate server/private/root server/private/credentials
+touch server/ca/index.txt
+echo 1000 > server/ca/serial
+mkdir server/ca/intermediate/certs server/ca/intermediate/csr server/ca/intermediate/newcerts server/ca/intermediate/private
+touch server/ca/intermediate/index.txt
+echo 1000 > server/ca/intermediate/serial
+mkdir server/private/credentials
 
 for f in /home/mailbox/*; do
     cred="$(python3 $pwd/crypt-pw.py ${f:14})"
