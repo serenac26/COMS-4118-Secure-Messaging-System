@@ -1,3 +1,6 @@
+#ifndef __UTILS_H__
+#define __UTILS_H__
+
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -22,6 +25,8 @@
 
 #define ROOT_CERTIFICATE "../ca/certs/ca.cert.pem"
 #define INTERMED_CERTIFICATE "../ca/intermediate/certs/intermediate.cert.pem"
+
+#define IMCNF "imopenssl.cnf"
 
 #define FROM "From: "
 #define TO "To: "
@@ -54,3 +59,5 @@ int appendList(struct Node **list, bstring str);
 bstring printList(struct Node *list);
 
 int getMessageFilename(bstring recip, bstring filename);
+
+#endif

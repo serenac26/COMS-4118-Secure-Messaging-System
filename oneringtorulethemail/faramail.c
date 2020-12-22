@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include "faramailutils.h"
 
 #define READBUF_SIZE 1000
 #define WRITEBUF_SIZE 1000
@@ -189,6 +190,51 @@ int testParsers(int mama, char **moo)
   int result2 = parseOptionLine(yeet2, &ol);
   printf("%d %s\n", result2, ol.header);
   printf("%d %s\n", result2, ol.value);
+  return 0;
+}
+
+// cert will be filled with the new certificate contents
+// cert will be written to ca/intermediate/certs/username.cert.pem
+// on success returns the length of the cert
+int handleGetCert(char *cert, char *username, char *pw) {
+  int lret = login(username, pw);
+  if (lret == 1) {
+    fprintf(stderr, "Login failed: bad username\n");
+    return -1;
+  } else if (lret == 2) {
+    fprintf(stderr, "Login failed: incorrect password\n");
+    return -1;
+  }
+  printf("Login successful\n");
+  return getcert(cert, username);
+}
+
+// change password only if mailbox is empty
+// cert will be filled with the new certificate contents
+// cert will be written to ca/intermediate/certs/username.cert.pem
+// on success returns the length of the cert
+int handleChangePw(char *cert, char *username, char *oldpw, char *newpw) {
+  int lret = login(username, oldpw);
+  if (lret == 1) {
+    fprintf(stderr, "Login failed: bad username\n");
+    return -1;
+  } else if (lret == 2) {
+    fprintf(stderr, "Login failed: incorrect password\n");
+    return -1;
+  }
+  int cret = checkmail(username);
+  if (cret == 1) {
+    fprintf(stderr, "Error checking mailbox. Password not changed.\n");
+    return -1;
+  } else if (cret == 2) {
+    fprintf(stderr, "Mailbox is not empty. Password not changed.\n");
+    return -1;
+  }
+  if (changepw(username, newpw) != 0) {
+    fprintf(stderr, "Error changing password\n");
+    return -1;
+  }
+  return getcert(cert, username);
 }
 
 // Refer to:
@@ -210,13 +256,14 @@ int main(int mama, char **moo)
   SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
   SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
 
-  if (SSL_CTX_use_certificate_file(ctx, "root/ca/intermediate/certs/www.moonchild.com.cert.pem", SSL_FILETYPE_PEM) != 1)
+  if (SSL_CTX_use_certificate_file(ctx, "../ca/intermediate/certs/faramail.cert.pem", SSL_FILETYPE_PEM) != 1)
   {
     ERR_print_errors_fp(stderr);
     exit(EXIT_FAILURE);
   }
 
-  if (SSL_CTX_use_PrivateKey_file(ctx, "root/ca/intermediate/private/www.moonchild.com.key.pem", SSL_FILETYPE_PEM) != 1)
+  // TODO: need to input password
+  if (SSL_CTX_use_PrivateKey_file(ctx, "../ca/intermediate/private/faramail.key.pem", SSL_FILETYPE_PEM) != 1)
   {
     ERR_print_errors_fp(stderr);
     exit(EXIT_FAILURE);
@@ -229,7 +276,7 @@ int main(int mama, char **moo)
     struct sockaddr_in addr;
     uint len = sizeof(addr);
     SSL *ssl = SSL_new(ctx);
-    const char reply[] = "test\n";
+    // const char reply[] = "test\n";
 
     int client = accept(sock, (struct sockaddr *)&addr, &len);
 
