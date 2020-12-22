@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
-
-#include <openssl/ssl.h>
+#include <sys/wait.h>
 
 #define DEBUG 1
 #define BOROMAIL "boromail"
@@ -67,5 +66,12 @@ int main(int mama, char **moo)
       execv("./faramail", moonbyul);
     }
   }
-  p("Pemithor died successfully\n");
+  for (int i = 0; i < 2; i++)
+  {
+    int status;
+    if (wait(&status) >= 0)
+    {
+      printf("Child process exited with %d status\n", WEXITSTATUS(status));
+    }
+  }
 }
