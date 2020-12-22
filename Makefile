@@ -47,7 +47,7 @@ faramail: faramail.o
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-servercomponents: login checkmail verifysign sendto msgin #changepw
+servercomponents: login checkmail verifysign sendto msgin changepw
 	sudo mv $^ $(TREE)/server/bin
 	sudo cp $(NINERINGS)/getcert.sh $(TREE)/server/bin
 	sudo cp imopenssl.cnf $(TREE)/server
