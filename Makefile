@@ -47,7 +47,7 @@ faramail: faramail.o
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-servercomponents: login checkmail verifysign sendto msgin changepw
+servercomponents: login checkmail verifysign sendto msgin msgout changepw
 	mv $^ $(TREE)/server/bin
 	cp $(NINERINGS)/getcert.sh $(TREE)/server/bin
 
@@ -72,6 +72,10 @@ sendto: sendto.o $(SERVERUTILS) $(BSTROBJS)
 	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
 
 msgin: msgin.o $(SERVERUTILS) $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+
+msgout: msgout.o $(SERVERUTILS) $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
 	
