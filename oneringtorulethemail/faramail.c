@@ -11,11 +11,11 @@
 
 #define READBUF_SIZE 1000
 #define WRITEBUF_SIZE 1000
-#define ERR_TOO_LONG "One or more of your fields were too loooooooooong"
-#define ERR_INVALID_LINE "Unexpected line encountered"
-#define ERR_INVALID_CONTENT_LENGTH "Content length must be a number"
-#define ERR_INVALID_CONNECTION_VALUE "Connection must be either close or keep-alive"
-#define ERR_INSUFFICIENT_CONTENT_SENT "Send more content you stingy fuck nOoo~ you're so sexy aha 😘"
+#define ERR_TOO_LONG "One or more of your fields were too loooooooooong\n"
+#define ERR_INVALID_LINE "Unexpected line encountered\n"
+#define ERR_INVALID_CONTENT_LENGTH "Content length must be a number\n"
+#define ERR_INVALID_CONNECTION_VALUE "Connection must be either close or keep-alive\n"
+#define ERR_INSUFFICIENT_CONTENT_SENT "Send more content you stingy fuck nOoo~ you're so sexy aha 😘\n"
 
 struct VerbLine
 {
