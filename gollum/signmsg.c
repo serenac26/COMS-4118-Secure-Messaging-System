@@ -12,7 +12,7 @@
 #include <openssl/cms.h>
 #include <openssl/err.h>
 
-int signmsg(char *cert_file, char *pkey_file, char *msg_in, char *msg_out)
+int signmsg(char *cert_file, char *pkey_file, char *pass, char *msg_in, char *msg_out)
 {
     BIO *in = NULL, *out = NULL, *certbio = NULL, *keybio = NULL;
     X509 *scert = NULL;
@@ -41,7 +41,7 @@ int signmsg(char *cert_file, char *pkey_file, char *msg_in, char *msg_out)
 
     keybio = BIO_new_file(pkey_file, "r");
 
-    skey = PEM_read_bio_PrivateKey(keybio, NULL, 0, NULL);
+    skey = PEM_read_bio_PrivateKey(keybio, NULL, 0, pass);
 
     if (!scert || !skey)
         goto err;
@@ -90,9 +90,9 @@ int signmsg(char *cert_file, char *pkey_file, char *msg_in, char *msg_out)
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 5) {
-        fprintf(stderr, "bad arg count; usage: signmsg <certfile> <keyfile> <msgin> <msgout>\n");
+    if (argc != 6) {
+        fprintf(stderr, "bad arg count; usage: signmsg <certfile> <keyfile> <pass> <msgin> <msgout>\n");
         return 1;
     }
-    return signmsg(argv[1], argv[2], argv[3], argv[4]);
+    return signmsg(argv[1], argv[2], argv[3], argv[4], argv[5]);
 }

@@ -1,21 +1,22 @@
 #!/bin/bash
 
-# boromail should maybe copy this script and the CSR into ca directory before sandboxing
+# boromail should maybe copy this script and the CSR into ca directory before sandboxing (if sandboxing mail and ca separately)
 
-# input: username/password (?), CSR, public key (?)
-# output: certificate
-
-# TODO: add TLS+encryption+signing roles for usr_cert configuration
-
-username=$1
+cert=../ca/intermediate/certs/$1.cert.pem
 clientreq=$2
-#intermedcert=
-#intermediatekey=
-#cacnf=
-#clientcert=
+intermedcert=$3
+intermediatekey=$4
+pass=$5
+imcnf=$6
+clientcert=$7
 
-# CA signs certificate containing public key
-openssl x509 -req -in $clientreq -CA $intermedcert -CAkey $intermdediatekey -days 365 \
-    -extfile $cacnf -extensions usr_cert -CAcreateserial -out $clientcert
+# intermediate CA signs certificate containing user's public key
+openssl ca -batch -config $imcnf -extensions usr_cert \
+    -passin pass:$pass \
+    -days 365 -notext -md sha256 \
+    -in $clientreq \
+    -out $cert
+    
+cp $cert $clientcert
 
 
