@@ -2,8 +2,6 @@
 
 # boromail should maybe copy this script and the CSR into ca directory before sandboxing (if sandboxing mail and ca separately)
 
-# TODO: add TLS+encryption+signing roles for usr_cert configuration in imcnf
-
 cert=../ca/intermediate/certs/$1.cert.pem
 clientreq=$2
 intermedcert=$3
