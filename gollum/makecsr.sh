@@ -8,11 +8,9 @@
 imcnf=$1
 username=$2
 clientkey=$3
-pass=$4
-clientreq=$5
+clientreq=$4
 
 openssl req -config $imcnf -new -sha256 \
   -key $clientkey \
-  -passin pass:$pass \
   -subj /C=US/ST=NY/O=$username/OU=client_$username/CN=$username/ \
   -out $clientreq

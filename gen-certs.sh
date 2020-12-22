@@ -1,28 +1,29 @@
 #!/bin/bash
 
-rsapass=$(head -c 100 /dev/urandom | tr -dc 'a-zA-Z0-9+_-')
+# rsapass=$(head -c 100 /dev/urandom | tr -dc 'a-zA-Z0-9+_-')
+rsapass=pass
 
 pwd=$(pwd)
 
-cp rootopenssl.cnf $1/server/ca/rootopenssl.cnf
-cp imopenssl.cnf $1/server/ca/imopenssl.cnf
+cp rootopenssl.cnf $1/server/rootopenssl.cnf
+cp imopenssl.cnf $1/server/imopenssl.cnf
 
-cd $1/server/ca
+cd $1/server
 
 rootcnf=rootopenssl.cnf
 imcnf=imopenssl.cnf
 
-touch index.txt
-echo 1000 >serial
+touch ca/index.txt
+echo 1000 >ca/serial
 
-rootrsa=private/ca.key.pem
+rootrsa=ca/private/ca.key.pem
 echo "generate root RSA key and store in read-only file $rootrsa"
 openssl genrsa -aes256 -out $rootrsa -passout pass:$rsapass 4096
 chmod 400 $rootrsa
 
 echo _________________________________________________________________________________________
 
-rootcert=certs/ca.cert.pem
+rootcert=ca/certs/ca.cert.pem
 echo "generate self-signed root certificate from root RSA key \
 and store in read-only file $rootcert"
 openssl req -config $rootcnf \
@@ -40,7 +41,7 @@ openssl x509 -noout -text -in $rootcert
 
 echo _________________________________________________________________________________________
 
-im=intermediate
+im=ca/intermediate
 
 touch $im/index.txt
 echo 1000 > $im/serial
@@ -152,5 +153,4 @@ openssl x509 -noout -text -in $fservercert
 openssl verify -CAfile $cachain $fservercert
 
 cd $pwd
-rm $1/server/ca/rootopenssl.cnf
-rm $1/server/ca/imopenssl.cnf
+rm $1/server/rootopenssl.cnf

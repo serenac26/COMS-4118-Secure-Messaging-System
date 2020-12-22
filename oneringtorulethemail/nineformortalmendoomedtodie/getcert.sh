@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# boromail should maybe copy this script and the CSR into ca directory before sandboxing (if sandboxing mail and ca separately)
+# boromail should maybe copy this script and the CSR into ca directory before sandboxing (if sandboxing mail and ca separately
 
-cert=../ca/intermediate/certs/$1.cert.pem
+cd ..
+
+cert=ca/intermediate/certs/$1.cert.pem
 clientreq=$2
-intermedcert=$3
-intermediatekey=$4
-pass=$5
-imcnf=$6
-clientcert=$7
+pass=pass
+imcnf=$4
+clientcert=$5
 
 # intermediate CA signs certificate containing user's public key
 openssl ca -batch -config $imcnf -extensions usr_cert \

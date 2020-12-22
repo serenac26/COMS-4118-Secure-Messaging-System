@@ -4,7 +4,7 @@ default_ca = CA_default
 
 [ CA_default ]
 # Directory and file locations.
-dir               = .
+dir               = ./ca
 certs             = $dir/certs
 new_certs_dir     = $dir/newcerts
 database          = $dir/index.txt

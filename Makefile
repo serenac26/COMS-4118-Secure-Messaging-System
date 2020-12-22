@@ -53,7 +53,6 @@ faramail: faramail.o
 servercomponents: login checkmail verifysign sendto msgin changepw
 	sudo mv $^ $(TREE)/server/bin
 	sudo cp $(NINERINGS)/getcert.sh $(TREE)/server/bin
-	sudo cp imopenssl.cnf $(TREE)/server
 
 login: login.o
 	echo Linking: $@
