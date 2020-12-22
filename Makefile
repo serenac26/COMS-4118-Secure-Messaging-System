@@ -75,6 +75,10 @@ sendto: sendto.o $(SERVERUTILS) $(BSTROBJS)
 msgin: msgin.o $(SERVERUTILS) $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+
+msgout: msgout.o $(SERVERUTILS) $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
 	
 %.o: $(NINERINGS)/%.c
 	echo Compiling: $<
