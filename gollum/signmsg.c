@@ -12,17 +12,12 @@
 #include <openssl/cms.h>
 #include <openssl/err.h>
 
-int main(int argc, char **argv)
+int signmsg(char *cert_file, char *pkey_file, char *msg_in, char *msg_out)
 {
     BIO *in = NULL, *out = NULL, *certbio = NULL, *keybio = NULL;
     X509 *scert = NULL;
     EVP_PKEY *skey = NULL;
     CMS_ContentInfo *cms = NULL;
-
-    char *cert_file;
-    char *pkey_file;
-    char *msg_in;
-    char *msg_out;
 
     int ret = 1;
 
@@ -32,15 +27,6 @@ int main(int argc, char **argv)
      * non-detached set CMS_STREAM
      */
     int flags = CMS_DETACHED | CMS_STREAM;
-
-    if (argc != 5) {
-        fprintf(stderr, "bad arg count; usage: signmsg <msgin> <certificatefile> <msgout>\n");
-        return 1;
-    }
-    msg_in = argv[1];
-    cert_file = argv[2];
-    pkey_file = argv[3];
-    msg_out = argv[4];
 
     OpenSSL_add_all_algorithms();
     ERR_load_crypto_strings();
@@ -101,4 +87,12 @@ int main(int argc, char **argv)
     BIO_free(certbio);
     BIO_free(keybio);    
     return ret;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 5) {
+        fprintf(stderr, "bad arg count; usage: signmsg <certfile> <keyfile> <msgin> <msgout>\n");
+        return 1;
+    }
+    return signmsg(argv[1], argv[2], argv[3], argv[4]);
 }

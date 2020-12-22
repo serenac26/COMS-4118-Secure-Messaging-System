@@ -78,4 +78,10 @@ int decryptmsg(char *cert_file, char *private_key_file, char *ciphertext_file, c
     return ret;
 }
 
-int main() {return 0;}
+int main(int argc, char *argv[]) {
+    if (argc != 5) {
+        fprintf(stderr, "bad arg count; usage: decryptmsg <certfile> <keyfile> <ciphertxtfile> <plaintxtfile>\n");
+        return 1;
+    }
+    return decryptmsg(argv[1], argv[2], argv[3], argv[4]);
+}
