@@ -88,11 +88,7 @@ nsCertType = client, email
 nsComment = "OpenSSL Generated Client Certificate"
 subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid,issuer
-<<<<<<< HEAD
-keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment
-=======
-keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment, keyEncipherment, dataEncipherment
->>>>>>> 57ddf98fa553df25a43f53fa23c21f8f9fd2e81a
+keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment, dataEncipherment
 extendedKeyUsage = clientAuth, emailProtection
 
 [ server_cert ]
@@ -107,26 +103,4 @@ extendedKeyUsage = serverAuth
 subjectAltName = @alt_names
 
 [ alt_names ]
-DNS.1 = stc2137.server.com
-<<<<<<< HEAD
-
-[ encrypt_cert ]
-# Extensions for file encryption certificates
-basicConstraints = CA:FALSE
-nsComment = "OpenSSL Generated File Sender Certificate"
-subjectKeyIdentifier = hash
-authorityKeyIdentifier = keyid,issuer:always
-keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment, dataEncipherment
-extendedKeyUsage = serverAuth
-
-[ signer_cert ]
-# Extensions for file signing certificates
-basicConstraints = CA:FALSE
-nsComment = "OpenSSL Generated File Certificate"
-subjectKeyIdentifier = hash
-authorityKeyIdentifier = keyid,issuer:always
-keyUsage = critical, nonRepudiation, digitalSignature, keyCertSign
-extendedKeyUsage = serverAuth
-
-=======
->>>>>>> 57ddf98fa553df25a43f53fa23c21f8f9fd2e81a
+DNS.1 = gondor.server.com
