@@ -14,7 +14,22 @@
 int main(int argc, char *argv[]) {
     char *certificate = getpass("Enter certificate: ");
     char *message = getpass("Enter message: ");
+//1. comma separated list of inputs is the headline of the message
+//2. parse certificate for the username
+//2. parse the comma separated, send to server
+//3. server sends back certificates in order, not sure how it's separated
+//4. write each certificiate to a temporary pem file
+//5. for each certificate call the encrypt-msg function in gollum and the contents are written to a temporary file (added to/from headers)
+//6. read the temporary file for the encrypted results
+//7. send the results to the server
+//8. gets a 200 ok back from server
 
+//send recipients to server
+//server sends back certificates
+//write certificates to a pem file
+//for each recipient, execl pass in what it needs, writes to a file 
+//encrypted files read contents out send to server, each will be a post request
+//send post request back to server, parse certificate 
     SSL_CTX *ctx;
     SSL *ssl;
     const SSL_METHOD *meth; 

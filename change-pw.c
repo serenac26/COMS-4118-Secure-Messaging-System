@@ -16,7 +16,9 @@ int main(int argc, char *argv) {
     char *password = getpass("Enter old password: ");
     char *newkey = getpass("Enter new privatekey: ");
     char *newpassword = getpass("Enter new password: ");
-
+//make csr with new private key and password 
+//username /password/newpassword/csr 
+//write new certificate
     if ((strlen(username) > 32) || (strlen(password) >32)) {
         printf("input too large: must be 32 or less characters\n");
     }

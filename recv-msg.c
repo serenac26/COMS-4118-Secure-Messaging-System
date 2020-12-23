@@ -13,7 +13,11 @@
 
 int main(int argc, char *argv[]) {
     char *certificate = getpass("Enter certificate: ");
-
+//pass in receive message 
+//send certificate 
+//server sends back response decrypt message, 
+//need private key to decrypt message
+//:) 
     SSL_CTX *ctx;
     SSL *ssl;
     const SSL_METHOD *meth; 
