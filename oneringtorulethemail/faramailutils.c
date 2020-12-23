@@ -72,7 +72,7 @@ int changepw(char *username, char *pw)
     char *hashedpw;
     char hashedpw_file[100];
     FILE *fp;
-    salt = crypt_gensalt(NULL, 0, NULL, 0);
+    // salt = crypt_gensalt(NULL, 0, NULL, 0);
     hashedpw = crypt(pw, salt);
     printf("%s\n", hashedpw);
     sprintf(hashedpw_file, "%s/%s%s", HASHEDPW_PATH, username, HASHEDPW_SUFFIX);

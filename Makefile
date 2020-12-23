@@ -51,20 +51,17 @@ faramail: faramail.o $(SERVERUTILS) $(BSTROBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Start testing
-servercomponents: verifysign sendto msgin msgout
+boromailutils: boromailutils.o  utils.o  $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	sudo cp boromailutils $(TREE)/server/bin
+
+servercomponents: verifysign msgout
 	sudo mv $^ $(TREE)/server/bin
 	
 verifysign: verifysign.o
 	echo Linking: $@
 	$(CC) $< -o $@ $(LFLAGS)
-
-sendto: sendto.o $(SERVERUTILS) $(BSTROBJS)
-	echo Linking: $@
-	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
-
-msgin: msgin.o $(SERVERUTILS) $(BSTROBJS)
-	echo Linking: $@
-	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
 
 msgout: msgout.o $(SERVERUTILS) $(BSTROBJS)
 	echo Linking: $@
@@ -93,7 +90,7 @@ decryptmsg: decryptmsg.o
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f pemithor boromail faramail verifysign sendto msgin msgout signmsg encryptmsg decryptmsg *.o
+	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg *.o
 
 .PHONY : all
 .PHONY : install

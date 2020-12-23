@@ -56,7 +56,9 @@ int prependList(struct Node **list, bstring str);
 
 int appendList(struct Node **list, bstring str);
 
-bstring printList(struct Node *list);
+bstring printList(struct Node *list, const char *delim);
+
+int recipExists(bstring recip);
 
 int getMessageFilename(bstring recip, bstring filename);
 

@@ -9,6 +9,13 @@ clientreq=$2
 impass=pass
 imcnf=$3
 
+# check if $clientcert already exists
+# if it does, then openssl ca -config $imcnf -revoke $clientcert
+if test -f "$clientcert"; then
+    echo "Revoking old certificate $clientcert"
+    openssl ca -config $imcnf -revoke $clientcert
+fi
+
 # intermediate CA signs certificate containing user's public key
 openssl ca -batch -config $imcnf -extensions usr_cert \
     -passin pass:$impass \
