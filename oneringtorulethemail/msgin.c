@@ -53,4 +53,40 @@ int sendmsg(bstring sender, struct Node *recipient, struct Node *recipients, bst
     return 0;
 }
 
-int main() {return 0;}
+int main(int argc, char *argv[]) {
+    char *msg;
+    char *sender;
+    char **recipients;
+    struct Node *recipients_list;
+    struct Node *recipient;
+    int i = 0;
+    if (argc < 4) {
+        fprintf(stderr, "bad arg count; usage: faramailutils login <username> <password>\n");
+        return 1;
+    }
+    msg = argv[1];
+    sender = argv[2];
+    recipients = argv + 3;
+    recipients_list = createList();
+    bstring bsender = bfromcstr(sender);
+    bstring bmsg = bfromcstr(msg);
+    while (recipients[i] != NULL) {
+        appendList(&recipients_list, bfromcstr(recipients[i++]));
+    }
+    recipient = recipients_list;
+    while (recipient != NULL)
+    {
+        if (recipient->str != NULL) {
+            bstring brecipient = recipient->str;
+            printf("send to: %s\n", brecipient->data);
+            if (sendmsg(bsender, recipient, recipients_list, bmsg) == -1) {
+                fprintf(stderr, "Error sending message to %s\n", brecipient->data);
+            }
+        }
+        recipient = recipient->next;
+    }
+    bdestroy(bsender);
+    bdestroy(bmsg);
+    freeList(recipients_list);
+    return 0;
+}

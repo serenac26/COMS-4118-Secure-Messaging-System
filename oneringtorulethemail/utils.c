@@ -107,6 +107,7 @@ int getMessageFilename(bstring recip, bstring filename)
   bstring _filename = bformat("../mail/%s/%05d", recip->data, file_count);
 
   while (stat((char *) _filename->data, &filestat) == 0) {
+    bdestroy(_filename);
     file_count++;
     _filename = bformat("../mail/%s/%05d", recip->data, file_count);
   }

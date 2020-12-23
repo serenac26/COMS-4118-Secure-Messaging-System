@@ -50,24 +50,26 @@ faramail: faramail.o $(SERVERUTILS) $(BSTROBJS)
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-# servercomponents: verifysign sendto msgin
-# 	sudo mv $^ $(TREE)/server/bin
+# Start testing
+servercomponents: verifysign sendto msgin msgout
+	sudo mv $^ $(TREE)/server/bin
 	
-# verifysign: verifysign.o
-# 	echo Linking: $@
-# 	$(CC) $< -o $@ $(LFLAGS)
+verifysign: verifysign.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
 
-# sendto: sendto.o $(SERVERUTILS) $(BSTROBJS)
-# 	echo Linking: $@
-# 	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+sendto: sendto.o $(SERVERUTILS) $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
 
-# msgin: msgin.o $(SERVERUTILS) $(BSTROBJS)
-# 	echo Linking: $@
-# 	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+msgin: msgin.o $(SERVERUTILS) $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
 
-# msgout: msgout.o $(SERVERUTILS) $(BSTROBJS)
-# 	echo Linking: $@
-# 	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+msgout: msgout.o $(SERVERUTILS) $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+# End testing
 	
 client: signmsg encryptmsg decryptmsg
 	sudo mv $^ $(TREE)/client/bin
