@@ -15,9 +15,7 @@
 #include "bstrlibext.h"
 
 #include "utils.h"
-#include "decryptmsg.h"
-// #include "verifysign.h"
-// #include "verifynoverify.h"
+#include "gollumutils.h"
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>

@@ -17,8 +17,7 @@
 #include "bstrlibext.h"
 
 #include "utils.h"
-#include "encryptmsg.h"
-#include "signmsg.h"
+#include "gollumutils.h"
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
