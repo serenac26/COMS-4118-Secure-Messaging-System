@@ -54,7 +54,7 @@ char* base64_decode(char* cipher) {
     // counts was originally a char
     int counts = 0;
     char buffer[4];
-    char* plain = malloc(strlen(cipher) * 3 / 4);
+    char* plain = malloc(strlen(cipher) * 3 / 4 + 1);
     int i = 0, p = 0;
 
     for(i = 0; cipher[i] != '\0'; i++) {

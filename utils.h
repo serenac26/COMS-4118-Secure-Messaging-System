@@ -70,4 +70,8 @@ void encodeMessage(bstring message);
 
 void decodeMessage(bstring message);
 
+int serializeData(bstring key, bstring value, bstring result, int encode);
+
+int deserializeData(bstring key, bstring value, bstring result, int decode);
+
 #endif
