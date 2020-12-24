@@ -6,6 +6,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
@@ -14,7 +16,7 @@
 int main(int argc, char *argv) {
     char *username = getpass("Enter username: ");
     char *password = getpass("Enter old password: ");
-    char *newkey = getpass("Enter new privatekey: ");
+    char *newkeyfile = getpass("Enter new privatekey file: ");
     char *newpassword = getpass("Enter new password: ");
 //make csr with new private key and password 
 //username /password/newpassword/csr 
@@ -22,6 +24,37 @@ int main(int argc, char *argv) {
     if ((strlen(username) > 32) || (strlen(password) >32)) {
         printf("input too large: must be 32 or less characters\n");
     }
+
+    FILE *fp;
+    fp = fopen(newkeyfile, "r+");
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *privatekey = malloc(fsize +1);
+    fread(privatekey, 1, fsize, fp);
+    fclose(fp);
+    privatekey[fsize] = 0;
+
+    char *tempfile = "temp.txt";
+    int pid, wpid;
+    int status = 0;
+    pid = fork();
+    //CHANGE int config and directory 
+    if (pid == 0) {
+        execl("../golum/makecsr.sh", "../golum/makecsr.sh", intconfi, username, privatekey, tempfile);
+    }
+    while ((wpid = wait(&status)) > 0);
+    FILE *temp; 
+    temp = fopen("temp.txt", "r+");
+    fseek(temp, 0, SEEK_END);
+    long fsize1 = ftell(temp);
+    fseek(temp, 0, SEEK_SET);
+
+    char *csr = malloc(fsize + 1);
+    fread(csr, 1, fsize1, temp);
+    fclose(temp);
+    remove("temp.txt");
 
     SSL_CTX *ctx;
 	SSL *ssl;
@@ -89,5 +122,6 @@ sbio=BIO_new(BIO_s_socket());
 
     //ssl write stuff, new pass 
     //ssl read confirm new 
+    free(privatekey);
     return 0;
 }

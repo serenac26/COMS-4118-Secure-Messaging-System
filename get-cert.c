@@ -6,6 +6,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
@@ -19,7 +21,17 @@ int main(int argc, char *argv[]) {
         printf("input too large: must be 32 or less characters\n");
     }
 
-    char *privatekey = getpass("Enter privatekey: ");
+    char *privatekeyfile = getpass("Enter privatekey file: ");
+    FILE *fp;
+    fp = fopen(privatekey, "r+");
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *privatekey = malloc(fsize + 1);
+    fread(privatekey, 1, fsize, fp);
+    fclose(fp);
+    privatekey[fsize] = 0;
     SSL_CTX *ctx;
     SSL *ssl;
     const SSL_METHOD *meth; 
@@ -83,6 +95,8 @@ int main(int argc, char *argv[]) {
 
     //writing stuff with http
     //GET /HTTP/1.0
+    //write to file and give to user. 
 
+    free(privatekey);
     return 0;
 }
