@@ -18,7 +18,7 @@ echo 1000 >ca/serial
 
 rootrsa=ca/private/ca.key.pem
 echo "generate root RSA key and store in read-only file $rootrsa"
-openssl genrsa -out $rootrsa -passout pass:$rsapass 4096
+openssl genrsa -aes256 -out $rootrsa -passout pass:$rsapass 4096
 chmod 400 $rootrsa
 
 echo _________________________________________________________________________________________
@@ -48,7 +48,7 @@ echo 1000 > $im/serial
 
 imrsa=$im/private/intermediate.key.pem
 echo "generate intermediate RSA key and store in read-only file $imrsa"
-openssl genrsa -out $imrsa -passout pass:$rsapass 4096
+openssl genrsa -aes256 -out $imrsa -passout pass:$rsapass 4096
 chmod 400 $imrsa
 
 echo _________________________________________________________________________________________
@@ -88,7 +88,7 @@ echo ___________________________________________________________________________
 
 bserverrsa=$im/private/boromail.key.pem
 echo "generate boromail web server RSA key"
-openssl genrsa -out $bserverrsa -passout pass:$rsapass 2048
+openssl genrsa -aes256 -out $bserverrsa -passout pass:$rsapass 2048
 chmod 400 $bserverrsa
 
 echo _________________________________________________________________________________________
@@ -122,7 +122,7 @@ echo ___________________________________________________________________________
 
 fserverrsa=$im/private/faramail.key.pem
 echo "generate faramail web server RSA key"
-openssl genrsa -out $fserverrsa -passout pass:$rsapass 2048
+openssl genrsa -aes256 -out $fserverrsa -passout pass:$rsapass 2048
 chmod 400 $fserverrsa
 
 echo _________________________________________________________________________________________
@@ -139,7 +139,7 @@ echo ___________________________________________________________________________
 
 fservercert=$im/certs/faramail.cert.pem
 echo "sign faramail web server certificate with intermediate certificate"
-openssl ca -batch -config $imcnf -extensions usr_cert \
+openssl ca -batch -config $imcnf -extensions server_cert \
     -passin pass:$rsapass \
     -days 375 -notext -md sha256 \
     -in $fserverreq \
