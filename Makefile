@@ -65,6 +65,16 @@ verifysign: verifysign.o
 msgout: msgout.o utils.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+
+send-msg: send-msg.o utils.o $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+
+recv-msg: recv-msg.o utils.o $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+
 # End testing
 	
 client: signmsg encryptmsg decryptmsg
@@ -89,7 +99,7 @@ decryptmsg: decryptmsg.o
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg *.o
+	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg send-msg recv-msg *.o
 
 .PHONY : all
 .PHONY : install
