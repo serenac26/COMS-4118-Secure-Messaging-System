@@ -61,10 +61,6 @@ servercomponents: verifysign msgout
 verifysign: verifysign.o
 	echo Linking: $@
 	$(CC) $< -o $@ $(LFLAGS)
-
-msgout: msgout.o utils.o $(BSTROBJS)
-	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
 # End testing
 	
 client: signmsg encryptmsg decryptmsg send-msg recv-msg
