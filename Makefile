@@ -67,6 +67,7 @@ faramailutils: faramailutils.o utils.o $(BSTROBJS)
 gollumutils: gollumutils.o utils.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	sudo cp gollumutils $(TREE)/client/bin
 
 servercomponents: verifysign msgout
 	sudo mv $^ $(TREE)/server/bin

@@ -27,7 +27,7 @@
  */
 
 /* Based on simple S/MIME encrypt example */
-int encryptmsg(char *recipient_cert_file, char *plaintext_file, char *ciphertext_file)
+int encryptmsg(char *cert_file, char *plaintext_file, char *ciphertext_file)
 {
     BIO *in = NULL, *out = NULL, *tbio = NULL;
     X509 *rcert = NULL;
@@ -45,7 +45,7 @@ int encryptmsg(char *recipient_cert_file, char *plaintext_file, char *ciphertext
     ERR_load_crypto_strings();
 
     /* Read in recipient certificate */
-    tbio = BIO_new_file(recipient_cert_file, "r");
+    tbio = BIO_new_file(cert_file, "r");
 
     if (!tbio)
         goto err;
@@ -174,7 +174,7 @@ int decryptmsg(char *cert_file, char *private_key_file, char *ciphertext_file, c
 }
 
 /* Based off simple S/MIME signing example */
-int signmsg(char *cert_file, char *pkey_file, char *msg_in, char *msg_out)
+int signmsg(char *cert_file, char *private_key_file, char *unsigned_file, char *signed_file)
 {
     BIO *in = NULL, *out = NULL, *certbio = NULL, *keybio = NULL;
     X509 *scert = NULL;
@@ -201,7 +201,7 @@ int signmsg(char *cert_file, char *pkey_file, char *msg_in, char *msg_out)
 
     scert = PEM_read_bio_X509(certbio, NULL, 0, NULL);
 
-    keybio = BIO_new_file(pkey_file, "r");
+    keybio = BIO_new_file(private_key_file, "r");
 
     skey = PEM_read_bio_PrivateKey(keybio, NULL, 0, NULL);
 
@@ -210,7 +210,7 @@ int signmsg(char *cert_file, char *pkey_file, char *msg_in, char *msg_out)
 
     /* Open content being signed */
 
-    in = BIO_new_file(msg_in, "r");
+    in = BIO_new_file(unsigned_file, "r");
 
     if (!in)
         goto err;
@@ -221,7 +221,7 @@ int signmsg(char *cert_file, char *pkey_file, char *msg_in, char *msg_out)
     if (!cms)
         goto err;
 
-    out = BIO_new_file(msg_out, "w");
+    out = BIO_new_file(signed_file, "w");
     if (!out)
         goto err;
 
@@ -252,7 +252,7 @@ int signmsg(char *cert_file, char *pkey_file, char *msg_in, char *msg_out)
 }
 
 /* Based off simple S/MIME verification example */
-int verifysign(char *sender_cert_path, char *msg_file, char *ver_out_file) {
+int verifysign(char *sender_cert_path, char *signed_file, char *verified_file) {
     BIO *in = NULL, *out = NULL, *rootbio = NULL, *intmbio = NULL, *senderbio = NULL, *cont = NULL;
     X509_STORE *st = NULL;
     X509 *rootcert = NULL;
@@ -320,7 +320,7 @@ int verifysign(char *sender_cert_path, char *msg_file, char *ver_out_file) {
 
     /* Open message being verified */
 
-    in = BIO_new_file(msg_file, "r");
+    in = BIO_new_file(signed_file, "r");
 
     if (!in)
         goto err;
@@ -332,7 +332,7 @@ int verifysign(char *sender_cert_path, char *msg_file, char *ver_out_file) {
         goto err;
 
     /* File to output verified content to */
-    out = BIO_new_file(ver_out_file, "w");
+    out = BIO_new_file(verified_file, "w");
     if (!out)
         goto err;
 
@@ -368,57 +368,108 @@ int verifysign(char *sender_cert_path, char *msg_file, char *ver_out_file) {
 
 
 /* Based off simple S/MIME verification example */
-int verifynoverify(char *msg_file, char *unver_out_file) {
-  int ret = 1;
-  return ret;
+int verifyunsign(char *signed_file, char *unverified_file) {
+    BIO *in = NULL, *out = NULL, *cont = NULL;
+    X509_STORE *st = NULL;
+    CMS_ContentInfo *cms = NULL;
+
+    int ret = 1;
+
+    OpenSSL_add_all_algorithms();
+    ERR_load_crypto_strings();
+
+    /* Set up trusted CA certificate store */
+
+    st = X509_STORE_new();
+
+    /* Open message being verified */
+
+    in = BIO_new_file(signed_file, "r");
+
+    if (!in)
+        goto err;
+
+    /* parse message */
+    cms = SMIME_read_CMS(in, &cont);
+
+    if (!cms)
+        goto err;
+
+    /* File to output unverified content to */
+    out = BIO_new_file(unverified_file, "w");
+    if (!out)
+        goto err;
+
+    if (!CMS_verify(cms, NULL, st, cont, out, CMS_NOVERIFY)) {
+        fprintf(stderr, "Unsigning Failure\n");
+        goto err;
+    }
+
+    fprintf(stderr, "Unsigning Successful\n");
+
+    ret = 0;
+
+ err:
+
+    if (ret) {
+        fprintf(stderr, "Error Verifying Data\n");
+        ERR_print_errors_fp(stderr);
+    }
+
+    X509_STORE_free(st);
+    CMS_ContentInfo_free(cms);
+    BIO_free(in);
+    BIO_free(out);
+    BIO_free(cont);
+    return ret;
 }
 
 // Testing
-int main(int argc, char *argv[]) {
-    char *op;
-    if (argc < 2) {
-        fprintf(stderr, "bad arg count; usage: gollumutils <operation>\nsupported operations: encryptmsg decryptmsg signmsg verifysign");
-        return 1;
-    }
-    op = argv[1];
+// int main(int argc, char *argv[]) {
+//     char *op;
+//     if (argc < 2) {
+//         fprintf(stderr, "bad arg count; usage: gollumutils <operation>\nsupported operations: encryptmsg decryptmsg signmsg verifysign");
+//         return 1;
+//     }
+//     op = argv[1];
 
-    if (strcmp(op, "encryptmsg") == 0) {
-        if (argc < 5) {
-            fprintf(stderr, "bad arg count; usage: gollumutils encryptmsg <certfile> <plaintxtfile> <ciphertxtfile>\n");
-            return 1;
-        }
-        return encryptmsg(argv[2], argv[3], argv[4]);
-    }
+//     if (strcmp(op, "encryptmsg") == 0) {
+//         if (argc < 5) {
+//             fprintf(stderr, "bad arg count; usage: gollumutils encryptmsg <certfile> <plaintxtfile> <ciphertxtfile>\n");
+//             return 1;
+//         }
+//         return encryptmsg(argv[2], argv[3], argv[4]);
+//     }
 
-    if (strcmp(op, "decryptmsg") == 0) {
-        if (argc < 6) {
-            fprintf(stderr, "bad arg count; usage: gollumutils decryptmsg <certfile> <keyfile> <ciphertxtfile> <plaintxtfile>\n");
-            return 1;
-        }
-        return decryptmsg(argv[2], argv[3], argv[4], argv[5]);
-    }
+//     if (strcmp(op, "decryptmsg") == 0) {
+//         if (argc < 6) {
+//             fprintf(stderr, "bad arg count; usage: gollumutils decryptmsg <certfile> <keyfile> <ciphertxtfile> <plaintxtfile>\n");
+//             return 1;
+//         }
+//         return decryptmsg(argv[2], argv[3], argv[4], argv[5]);
+//     }
 
-    if (strcmp(op, "signmsg") == 0) {
-        if (argc < 6) {
-            fprintf(stderr, "bad arg count; usage: gollumutils signmsg <certfile> <keyfile> <msgin> <msgout>\n");
-            return 1;
-        }
-        return signmsg(argv[2], argv[3], argv[4], argv[5]);
-    }
+//     if (strcmp(op, "signmsg") == 0) {
+//         if (argc < 6) {
+//             fprintf(stderr, "bad arg count; usage: gollumutils signmsg <certfile> <keyfile> <msgin> <msgout>\n");
+//             return 1;
+//         }
+//         return signmsg(argv[2], argv[3], argv[4], argv[5]);
+//     }
 
-    if (strcmp(op, "verifysign") == 0) {
-        if (argc != 5) {
-            fprintf(stderr, "bad arg count; usage: gollumutils verifysign <certfile> <msgfile> <veroutfile>\n");
-            return 1;
-        }
-        return verifysign(argv[2], argv[3], argv[4]);
-    }
+//     if (strcmp(op, "verifysign") == 0) {
+//         if (argc != 5) {
+//             fprintf(stderr, "bad arg count; usage: gollumutils verifysign <certfile> <msgfile> <veroutfile>\n");
+//             return 1;
+//         }
+//         return verifysign(argv[2], argv[3], argv[4]);
+//     }
 
-    if (strcmp(op, "verifynoverify") == 0) {
-        if (argc != 4) {
-            fprintf(stderr, "bad arg count; usage: gollumutils verifynoverify <msgfile> <unveroutfile>\n");
-            return 1;
-        }
-        return verifynoverify(argv[2], argv[3]);
-    }
-}
+//     if (strcmp(op, "verifyunsign") == 0) {
+//         if (argc != 4) {
+//             fprintf(stderr, "bad arg count; usage: gollumutils verifyunsign <msgfile> <unveroutfile>\n");
+//             return 1;
+//         }
+//         return verifyunsign(argv[2], argv[3]);
+//     }
+// }

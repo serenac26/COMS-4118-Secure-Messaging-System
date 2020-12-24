@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 
 
   // Get encrypted message from signed-msg without verifying and write to temp file encrypted-msg
-  verifynoverify(signed_file, encrypted_file);
+  verifyunsign(signed_file, encrypted_file);
 
 
   // Decrypt encrypted-msg using recipient's private key and write to temp file decrypted-msg
