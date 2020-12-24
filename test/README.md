@@ -18,11 +18,13 @@ changepw with no pending messages
 * user A creates new key with genkey
 * A changepw with new pw and new key
     * should get new cert back
+
 check password change
 * A tries to login for getcert with old pw and old key (key doesn't matter)
     * credential authentication should fail
 * A tries to login for getcert with new pw and old key
     * credential authentication should pass
+
 check certificate change
 * A sendmsg to B with old cert and old key
     * message 00001 should be written to B's mailbox
