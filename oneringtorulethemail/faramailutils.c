@@ -72,7 +72,7 @@ int changepw(char *username, char *pw)
     char *hashedpw;
     char hashedpw_file[100];
     FILE *fp;
-    salt = crypt_gensalt(NULL, 0, NULL, 0);
+    // salt = crypt_gensalt(NULL, 0, NULL, 0);
     hashedpw = crypt(pw, salt);
     printf("%s\n", hashedpw);
     sprintf(hashedpw_file, "%s/%s%s", HASHEDPW_PATH, username, HASHEDPW_SUFFIX);
@@ -88,19 +88,22 @@ int changepw(char *username, char *pw)
 }
 
 // cert MUST be at least MAX_CERT_SIZE
+// revoke: 0 do not replace certificate if it already exists
+// revoke: 1 replace certificate
 // on success returns length of certificate
-int getcert(char *cert, char *username) {
+int getcert(char *cert, char *username, int revoke) {
     // path relative to server directory
     char relclientcert[50];
     // path relative to current directory
     char clientcert[53];
     char relclientreq[50];
+    char *revokestr = (revoke == 0)?"0":"1";
     memset(cert, '\0', MAX_CERT_SIZE);
     // DO NOT use CERT_PATH macro here
     sprintf(relclientcert, "ca/intermediate/certs/%s.cert.pem", username);
     sprintf(clientcert, "../%s", relclientcert);
     sprintf(relclientreq, "ca/intermediate/csr/%s.req.pem", username);
-    char *args[5] = {"getcert.sh", relclientcert, relclientreq, IMCNF, NULL};
+    char *args[6] = {"getcert.sh", relclientcert, relclientreq, IMCNF, revokestr, NULL};
     pid_t pid = fork();
     if (pid == 0) {
         fflush(stdout);
@@ -186,7 +189,7 @@ int getcert(char *cert, char *username) {
 //             perror("malloc error");
 //             return 1;
 //         }
-//         return getcert(cert, username);
+//         return getcert(cert, username, 0);
 //     }
 
 //     fprintf(stderr, "operation %s not supported\n", op);
