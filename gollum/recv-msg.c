@@ -7,6 +7,18 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#include "bstrlib.h"
+#include "utf8util.h"
+#include "buniutil.h"
+#include "bstraux.h"
+#include "bsafe.h"
+#include "bstrlibext.h"
+
+#include "utils.h"
+#include "decryptmsg.h"
+// #include "verifysign.h"
+// #include "verifynoverify.h"
+
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -25,25 +37,26 @@
 // 10. delete temp files (signed-msg, decrypted-msg, sender-chain.cert.pem)
 
 int main(int argc, char *argv[]) {
-    char *certificate = getpass("Enter certificate: ");
+	char *certificate = getpass("Enter certificate: ");
 
-// TODO: give both cert and private key to do SSL handshake verification
-    SSL_CTX *ctx;
-    SSL *ssl;
-    const SSL_METHOD *meth; 
-    BIO *sbio;
-    int err; char *s;
+	// TODO: Give both cert and private key to do SSL handshake verification
+	/*
+	SSL_CTX *ctx;
+	SSL *ssl;
+	const SSL_METHOD *meth; 
+	BIO *sbio;
+	int err; char *s;
 
-    int ilen;
-    char ibuf[512];
-    
-    struct sockaddr_in sin;
-    int sock;
-    struct hostent *he;
-    SSL_library_init();
-    SSL_load_error_strings();
+	int ilen;
+	char ibuf[512];
+	
+	struct sockaddr_in sin;
+	int sock;
+	struct hostent *he;
+	SSL_library_init();
+	SSL_load_error_strings();
 
-    meth = TLS_client_method();
+	meth = TLS_client_method();
 	ctx = SSL_CTX_new(meth);
 	SSL_CTX_set_default_verify_dir(ctx);
 	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
@@ -55,7 +68,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-    bzero(&sin, sizeof sin);
+	bzero(&sin, sizeof sin);
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(443);
 	he = gethostbyname("");//edit this
@@ -89,8 +102,36 @@ int main(int argc, char *argv[]) {
 		return 3;
 	}
 
-    //writing stuff with http
-    //GET /HTTP/1.0
+	//writing stuff with http
+	//GET /HTTP/1.0
+	*/
 
-    return 0;
+
+// Get signed encrypted message from server and write to temp file signed-msg
+
+
+// Get encrypted message from signed-msg without verifying and write to temp file encrypted-msg
+
+
+// Decrypt encrypted-msg using recipient's private key and write to temp file decrypted-msg
+
+
+// Get sender name from decrypted-msg header
+
+
+// TODO: Send sender name to server /getusercert
+
+
+// TODO: Get sender cert and write to temp file sender.cert.pem
+
+
+// Verify sender of signed-message using sender.cert.pem and client's copy of ca-chain
+
+
+// Write the decrypted message to the specified output file
+
+
+// Delete temp files (signed-msg, decrypted-msg, sender-chain.cert.pem)
+
+	return 0;
 }

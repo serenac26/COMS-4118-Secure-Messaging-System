@@ -103,9 +103,9 @@ send-msg: send-msg.o utils.o encryptmsg.o signmsg.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o encryptmsg.o signmsg.o $(BSTROBJS) -o $@ $(LFLAGS)
 
-recv-msg: recv-msg.o utils.o $(BSTROBJS)
+recv-msg: recv-msg.o utils.o decryptmsg.o $(BSTROBJS)
 	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o decryptmsg.o $(BSTROBJS) -o $@ $(LFLAGS)
 
 clean:
 	rm -f pemithor boromail boromailutils faramail faramailutils verifysign msgout signmsg encryptmsg decryptmsg get-cert change-pw send-msg recv-msg *.o
