@@ -14,6 +14,7 @@
 #include "utils.h"
 #include "boromailutils.h"
 
+// TODO: one recipient at a time
 struct Node *getrecipientcerts(struct Node *recipients)
 {
     struct Node *certs = createList();
