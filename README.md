@@ -24,6 +24,10 @@ Send client requests:
 `./sendmsg`
 `./recvmsg`
 
+## Testing
+
+Refer to `test` directory
+
 ## Notes
 
 If you run into an error with `/usr/share/dict/words`, please try:
@@ -33,7 +37,6 @@ If you run into an error with `/usr/share/dict/words`, please try:
 If you are missing libssl-dev ```fatal error: openssl/ssl.h: No such file or directory```, please try:
 
 ```sudo apt-get install libssl-dev```
-
 
 
 ## TODO:
