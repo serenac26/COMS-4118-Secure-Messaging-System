@@ -8,12 +8,14 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include<sys/wait.h>
+
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
 //./change-pw <username> <privatekeyfile> 
-int main(int argc, char *argv) {
+int main(int argc, char *argv[]) {
 
     if (argc != 2) {
         fprintf(stderr, "bad arg count; usage: change-pw <username> <key-file>\n");
@@ -22,7 +24,7 @@ int main(int argc, char *argv) {
     char *username = argv[1];
     char *password = getpass("Enter old password: ");
     char *newkeyfile = argv[2];
-    char *newpassword = getpass("Enter new password: ");
+    char *newPassword = getpass("Enter new password: ");
 //make csr with new private key and password 
 //username /password/newpassword/csr 
 //write new certificate
@@ -66,9 +68,6 @@ int main(int argc, char *argv) {
 	const SSL_METHOD *meth;
 	BIO *sbio;
 	int err; char *s;
-
-	int ilen;
-	char ibuf[512];
 
 	struct sockaddr_in sin;
 	int sock;
@@ -128,40 +127,30 @@ sbio=BIO_new(BIO_s_socket());
     //ssl read confirm new 
     int bytes = (1024*1024);
     int port = 4200;
-    char *method = "getcert";
+    char *method = "changepw";
 
-    void *buffer = malloc(sizeof(char)*bytes);
-    *buffer = '\0';
+    char *buffer = (char *) malloc(sizeof(char)*bytes);
 
-    char *header;
+    char header[100];
     sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", port, method);
     char *header2 = "connection: close\n";
-    char *header3;
-    sprintf(header3, "content-length: %d\n", contentLength);
+    char header3[100];
 
-    char *usernameLine;
+    char usernameLine[sizeof(username)+strlen("username: \n")];
     sprintf(usernameLine, "username: %s\n", username);
 
-    char *passwordLine;
+    char passwordLine[sizeof(password)+strlen("password: \n")];
     sprintf(passwordLine, "password: %s\n", password);
 
-    char *csrLine;
+    char newPasswordLine[sizeof(newPassword)+strlen("new password: \n")];
+    sprintf(newPasswordLine, "new password: %s\n", newPassword);
+    char csrLine[strlen(csr) + strlen("csr: \n")];
     sprintf(csrLine, "csr: %s\n", csr);
 
    //+1 for new line
     int contentLength = strlen(username) + strlen(password) + strlen(csr) + 1;
     sprintf(header3, "content-length: %d\n", contentLength);
-    strncat(buffer, header, strlen(header));
-    strncat(buffer, header2, strlen(header2));
-    strncat(buffer, header3, strlen(header3));
-    strncat(buffer, "\n", strlen("\n"));
-
-
-    strncat(buffer, usernameLine, strlen(usernameLine));
-    strncat(buffer, passwordLine, strlen(passwordLine));
-    strncat(buffer, csrLine, strlen(passwordLine));
-    strncat(buffer, "\n", strlen("\n"));
-    
+    sprintf(buffer, "%s%s%s%s%s%s%s%s%s", header, header2, header3, "\n", usernameLine, passwordLine, newPasswordLine, csrLine, "\n");
     SSL_write(ssl, buffer, strlen(buffer));
     //should do read 
     //check read and return good or bad to user 
