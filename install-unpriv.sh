@@ -24,7 +24,7 @@ for f in /home/mailbox/*; do
     printf "${credarray[1]}" >> server/credentials/${f:14}.hashedpw
 done
 
-mkdir client/bin client/private 
+mkdir client/bin client/private client/tmp
 
 for f in /home/mailbox/*; do
     mkdir "server/mail/${f:14}"
