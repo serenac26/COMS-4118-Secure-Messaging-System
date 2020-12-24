@@ -87,6 +87,20 @@ int changepw(char *username, char *pw)
     return 0;
 }
 
+int addcsr(char *csr, char *username) {
+    char relclientreq[50];
+    FILE *fp;
+    sprintf(relclientreq, "%s/%s%s", CSR_PATH, username, CSR_SUFFIX);
+    fp = fopen(relclientreq, "w");
+    if (!fp) {
+        perror("File open error");
+        return -1;
+    }
+    fputs(csr, fp);
+    fclose(fp);
+    return 0;
+}
+
 // cert MUST be at least MAX_CERT_SIZE
 // on success returns length of certificate
 int getcert(char *cert, char *username) {
@@ -96,7 +110,7 @@ int getcert(char *cert, char *username) {
     char clientcert[53];
     char relclientreq[50];
     memset(cert, '\0', MAX_CERT_SIZE);
-    // DO NOT use CERT_PATH macro here
+    // DO NOT use CERT_PATH and CSR_PATH macros here
     sprintf(relclientcert, "ca/intermediate/certs/%s.cert.pem", username);
     sprintf(clientcert, "../%s", relclientcert);
     sprintf(relclientreq, "ca/intermediate/csr/%s.req.pem", username);

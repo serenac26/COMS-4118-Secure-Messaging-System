@@ -7,6 +7,8 @@ int checkmail(char *username);
 
 int changepw(char *username, char *pw);
 
+int addcsr(char *csr, char *username);
+
 int getcert(char *cert, char *username);
 
 #endif

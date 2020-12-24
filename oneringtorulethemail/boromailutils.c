@@ -15,7 +15,7 @@
 #include "boromailutils.h"
 
 // cert MUST be at least MAX_CERT_SIZE
-int getrecipientcert(char *cert, bstring recipient)
+int getusercert(char *cert, bstring recipient)
 {
     char cert_path[100];
     memset(cert, '\0', MAX_CERT_SIZE);
@@ -37,11 +37,12 @@ int getrecipientcert(char *cert, bstring recipient)
     return 0;
 }
 
-int sendmsg(bstring recipient, bstring msgin) {
+int sendmessage(bstring recipient, bstring msg) {
     bstring filename;
     FILE *fp;
     filename = bfromcstr("");
-    if (getMessageFilename(recipient, filename) == 0) {
+    if (getMessageFilename(recipient, filename) != 1) {
+        fprintf(stderr, "Error getting filename\n");        
         bdestroy(filename);
         return -1;
     }
@@ -53,7 +54,7 @@ int sendmsg(bstring recipient, bstring msgin) {
         bdestroy(filename);
         return -1;
     }
-    fwrite((char *)msgin->data, 1, msgin->slen, fp);
+    fwrite((char *)msg->data, 1, msg->slen, fp);
     fclose(fp);
     
     bdestroy(filename);
@@ -188,7 +189,7 @@ int verifysign(char *sender, char *msg_file, char *ver_out_file) {
 }
 
 // msgout needs to be freed
-int recvmsg(char* msgfile, char** msgout) {
+int recvmessage(bstring msgfile, char** msgout) {
     *msgout = malloc(MB);
     if (!*msgout) {
         perror("Malloc error");
@@ -199,9 +200,9 @@ int recvmsg(char* msgfile, char** msgout) {
     FILE *fp;
     
     // Get message body from message file
-    fp = fopen(msgfile, "r");
+    fp = fopen((char *)msgfile->data, "r");
     if (!fp) {
-        fprintf(stderr, "%s\n", msgfile);
+        fprintf(stderr, "%s\n", msgfile->data);
         perror("File open error");
         free(*msgout);
         return -1;
@@ -212,10 +213,48 @@ int recvmsg(char* msgfile, char** msgout) {
     fclose(fp);
 
     // Remove message file
-    remove(msgfile);
+    remove((char *)msgfile->data);
     
     free(line);
     return 0;
+}
+
+int getOldestFilename(bstring recip, bstring filename) {
+  char mailbox_path[100];
+  DIR *dp;
+  struct dirent *entry;
+  sprintf(mailbox_path, "%s/%s", MAIL_PATH, recip->data);
+  dp = opendir(mailbox_path);
+  if (!dp) {
+    fprintf(stderr, "%s\n", mailbox_path);
+    perror("Directory open error");
+    return -1;
+  }
+  while ((entry = readdir(dp))) {
+    if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+      closedir(dp);
+      int file_count = 1;
+      struct stat filestat;
+
+      bstring _filename = bformat("../mail/%s/%05d", recip->data, file_count);
+      while (stat((char *) _filename->data, &filestat) != 0) {
+        bdestroy(_filename);
+        file_count++;
+        _filename = bformat("../mail/%s/%05d", recip->data, file_count);
+      }
+      
+      int _i = bassign(filename, _filename);
+      bdestroy(_filename);
+
+      if (_i == BSTR_ERR)
+      {
+        return -1;
+      }
+      return 0;
+    }
+  }
+  closedir(dp);
+  return -1;
 }
 
 // Testing

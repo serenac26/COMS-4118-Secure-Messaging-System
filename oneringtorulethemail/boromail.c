@@ -8,6 +8,13 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include "bstrlib.h"
+#include "utf8util.h"
+#include "buniutil.h"
+#include "bstraux.h"
+#include "bsafe.h"
+#include "bstrlibext.h"
+#include "boromailutils.h"
 
 #define DEBUG 1
 #define READBUF_SIZE 1000
@@ -192,6 +199,29 @@ void testParsers(int mama, char **moo) {
   p("%d %s\n", result2, ol.value);
 }
 
+// these do not necessarily need to be in their own function but they are temporarily for compilation
+
+int handleGetUserCert(char *cert, bstring recipient) {
+  return getusercert(cert, recipient);
+}
+
+int handleSendMsg(bstring recipient, bstring msg) {
+  return sendmessage(recipient, msg);
+}
+
+// msg must be free()d by caller
+// char *msg;
+// handleRecvMsg(recipient, &msg);
+int handleRecvMsg(bstring recipient, char **msg) {
+  bstring filename = bfromcstr("");
+  if (getOldestFilename(recipient, filename) == -1) {
+    fprintf(stderr, "No message to receive\n");
+    return -1;
+  }
+  return recvmessage(filename, msg);
+}
+// free(msg);
+
 // Refer to:
 // http://h30266.www3.hpe.com/odl/axpos/opsys/vmsos84/BA554_90007/ch04s03.html
 // and https://wiki.openssl.org/index.php/Simple_TLS_Server for more information
@@ -255,7 +285,7 @@ int main(int mama, char **moo) {
       ERR_print_errors_fp(stderr);
     }
 
-    p("%d\n", SSL_get_verify_result(ssl));
+    p("%ld\n", SSL_get_verify_result(ssl));
 
     if (SSL_get_verify_result(ssl) != X509_V_OK) {
       SSL_shutdown(ssl);
