@@ -176,8 +176,7 @@ int parseSubject(char *data, bstring result) {
   regex_t reg;
   int value;
 
-  value = regcomp(&reg,
-                  "/C=US/ST=NY/O=.*/OU=client_.*/CN=(.*)/",
+  value = regcomp(&reg, "/C=US/ST=NY/O=.*/OU=client_.*/CN=(.*)/",
                   REG_EXTENDED | REG_ICASE);
   if (value != 0) {
     pb("Regex did not compile successfully\n");
@@ -185,11 +184,11 @@ int parseSubject(char *data, bstring result) {
   regmatch_t match[2];
   int test = regexec(&reg, data, 2, match, 0);
 
-  if (test == REG_NOMATCH)
-    return 1;
+  if (test == REG_NOMATCH) return 1;
 
   bstring bdata = bfromcstr(data);
-  bstring _result = bmidstr(bdata, match[1].rm_so, match[1].rm_eo - match[1].rm_so);
+  bstring _result =
+      bmidstr(bdata, match[1].rm_so, match[1].rm_eo - match[1].rm_so);
   bdestroy(bdata);
   bassign(result, _result);
   bdestroy(_result);
@@ -582,7 +581,8 @@ int main(int mama, char **moo) {
             connection = 2;
             goto cleanup;
           }
-          bstring recipientkey = NULL, recipientvalue = NULL;
+          bstring recipientkey = bfromcstr("");
+          bstring recipientvalue = bfromcstr("");
           if (deserializeData(recipientkey, recipientvalue, lines->entry[0],
                               0) != 0 ||
               bstrccmp(recipientkey, "recipient") != 0) {
@@ -610,7 +610,7 @@ int main(int mama, char **moo) {
 
           bstring certKey = bfromcstr("certificate");
           bstring certValue = bfromcstr(cert);
-          bstring certData = NULL;
+          bstring certData = bfromcstr("");
           if (serializeData(certKey, certValue, certData, 1) != 0) {
             bdestroy(certKey);
             bdestroy(certValue);
@@ -632,8 +632,11 @@ int main(int mama, char **moo) {
             connection = 2;
             goto cleanup;
           }
-          bstring recipientkey = NULL, recipientvalue = NULL, messagekey = NULL,
-                  messagevalue = NULL;
+          bstring recipientkey = bfromcstr("");
+          bstring recipientvalue = bfromcstr("");
+          bstring messagekey = bfromcstr("");
+          bstring messagevalue = bfromcstr("");
+
           if (deserializeData(recipientkey, recipientvalue, lines->entry[0],
                               0) != 0 ||
               deserializeData(messagekey, messagevalue, lines->entry[1], 0) !=

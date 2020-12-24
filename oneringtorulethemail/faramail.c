@@ -569,8 +569,13 @@ int main(int mama, char **moo) {
             connection = 2;
             goto cleanup;
           }
-          bstring usernamekey = NULL, usernamevalue = NULL, passwordkey = NULL,
-                  passwordvalue = NULL, csrkey = NULL, csrvalue = NULL;
+
+          bstring usernamekey = bfromcstr("");
+          bstring usernamevalue = bfromcstr("");
+          bstring passwordkey = bfromcstr("");
+          bstring passwordvalue = bfromcstr("");
+          bstring csrkey = bfromcstr("");
+          bstring csrvalue = bfromcstr("");
           if (deserializeData(usernamekey, usernamevalue, lines->entry[0], 0) !=
                   0 ||
               deserializeData(passwordkey, passwordvalue, lines->entry[1], 0) !=
@@ -592,9 +597,11 @@ int main(int mama, char **moo) {
             goto cleanup;
           }
           char cert[MAX_CERT_SIZE];
+
           memset(cert, '\0', sizeof(cert));
           int certLen;
           int r;
+
           if ((r = handleGetCert(cert, usernamevalue, passwordvalue, csrvalue,
                                  &certLen)) != 0) {
             bstring err = bformat("%s: %d", ERR_MALFORMED_REQUEST, r);
@@ -613,7 +620,7 @@ int main(int mama, char **moo) {
 
           bstring certKey = bfromcstr("certificate");
           bstring certValue = bfromcstr(cert);
-          bstring certData = NULL;
+          bstring certData = bfromcstr("");
           if (serializeData(certKey, certValue, certData, 1) != 0) {
             bdestroy(certKey);
             bdestroy(certValue);
@@ -626,6 +633,7 @@ int main(int mama, char **moo) {
           bdestroy(certValue);
           sendGood(ssl, 2, certData->data);
           bdestroy(certData);
+
         } else if (action == 2 && bstrccmp(path, "/changepw") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
           if (lines->qty != 5) {
@@ -635,9 +643,15 @@ int main(int mama, char **moo) {
             connection = 2;
             goto cleanup;
           }
-          bstring usernamekey = NULL, usernamevalue = NULL, passwordkey = NULL,
-                  passwordvalue = NULL, newpasswordkey = NULL,
-                  newpasswordvalue = NULL, csrkey = NULL, csrvalue = NULL;
+          bstring usernamekey = bfromcstr("");
+          bstring usernamevalue = bfromcstr("");
+          bstring passwordkey = bfromcstr("");
+          bstring passwordvalue = bfromcstr("");
+          bstring newpasswordkey = bfromcstr("");
+          bstring newpasswordvalue = bfromcstr("");
+          bstring csrkey = bfromcstr("");
+          bstring csrvalue = bfromcstr("");
+
           if (deserializeData(usernamekey, usernamevalue, lines->entry[0], 0) !=
                   0 ||
               deserializeData(passwordkey, passwordvalue, lines->entry[1], 0) !=
@@ -687,7 +701,8 @@ int main(int mama, char **moo) {
 
           bstring certKey = bfromcstr("certificate");
           bstring certValue = bfromcstr(cert);
-          bstring certData = NULL;
+          bstring certData = bfromcstr("");
+
           if (serializeData(certKey, certValue, certData, 1) != 0) {
             bdestroy(certKey);
             bdestroy(certValue);
@@ -696,9 +711,11 @@ int main(int mama, char **moo) {
             connection = 2;
             goto cleanup;
           };
+
           bdestroy(certKey);
           bdestroy(certValue);
           sendGood(ssl, 2, certData->data);
+
           bdestroy(certData);
         } else {
           sendBad(ssl, ERR_MALFORMED_REQUEST);
