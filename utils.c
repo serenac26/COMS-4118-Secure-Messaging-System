@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "base64.h"
 
 struct Node *createList()
 {
@@ -141,4 +142,24 @@ int getMessageFilename(bstring recip, bstring filename)
     return -1;
   }
   return 1;
+}
+
+/*
+ * Encodes a bstring in-place
+ */
+void encodeMessage(bstring message) {
+  char *result = base64_encode((char *) message->data);
+  bdestroy(message);
+  message = bfromcstr(result);
+  free(result);
+}
+
+/*
+ * Decodes a bstring in-place
+ */
+void decodeMessage(bstring message) {
+  char *result = base64_decode((char *) message->data);
+  bdestroy(message);
+  message = bfromcstr(result);
+  free(result);
 }

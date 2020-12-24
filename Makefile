@@ -1,13 +1,15 @@
 CC = gcc
 LD = gcc
 
+B64DIR = ./base64
 BSTRDIR = ./bstrlib
 ONERING = ./oneringtorulethemail
 GOLLUM = ./gollum
-INCLUDES = -I$(BSTRDIR) -I./
+INCLUDES = -I$(BSTRDIR) -I$(B64DIR) -I./
+B64OBJS = base64.o
 BSTROBJS = bstrlib.o bstrlibext.o
 DEFINES =
-LFLAGS = -L/usr/lib/ -L./bstrlib -lm -lssl -lcrypt -lcrypto
+LFLAGS = -L/usr/lib/ -L./bstrlib -L./base64 -lm -lssl -lcrypt -lcrypto
 CFLAGS = -O3 -Wall -pedantic -ansi -s $(DEFINES) -std=c99 -g -D_GNU_SOURCE
 
 install: install-unpriv server client gen-certs install-priv 
@@ -21,7 +23,7 @@ install-priv:
 gen-certs:
 	sudo ./gen-certs.sh $(TREE)
 
-%.o : $(BSTRDIR)/%.c
+%.o : $(BSTRDIR)/%.c $(B64DIR)/%.c
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
@@ -37,27 +39,27 @@ pemithor: pemithor.o
 	echo Linking: $@
 	$(CC) $< -o $@ $(LFLAGS)
 	
-boromail: boromail.o utils.o boromailutils.o $(BSTROBJS)
+boromail: boromail.o utils.o boromailutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
-	$(CC) $< utils.o boromailutils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o boromailutils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
-faramail: faramail.o utils.o faramailutils.o $(BSTROBJS)
+faramail: faramail.o utils.o faramailutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
-	$(CC) $< utils.o faramailutils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o faramailutils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
 %.o: $(ONERING)/%.c
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Start testing
-boromailutils: boromailutils.o utils.o $(BSTROBJS)
+boromailutils: boromailutils.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 	sudo cp boromailutils $(TREE)/server/bin
 
-faramailutils: faramailutils.o utils.o $(BSTROBJS)
+faramailutils: faramailutils.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 	sudo cp faramailutils $(TREE)/server/bin
 
 servercomponents: verifysign msgout
@@ -74,22 +76,22 @@ client: signmsg encryptmsg decryptmsg send-msg recv-msg
 	sudo cp imopenssl.cnf $(TREE)/client
 
 # Not compiling yet
-get-cert: get-cert.o utils.o $(BSTROBJS)
+get-cert: get-cert.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
-change-pw: change-pw.o utils.o $(BSTROBJS)
+change-pw: change-pw.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 #
 
-send-msg: send-msg.o utils.o $(BSTROBJS)
+send-msg: send-msg.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
-recv-msg: recv-msg.o utils.o $(BSTROBJS)
+recv-msg: recv-msg.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
 signmsg: signmsg.o
 	echo Linking: $@
