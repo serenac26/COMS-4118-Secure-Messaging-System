@@ -28,6 +28,10 @@
 #define ERR_INSUFFICIENT_CONTENT_SENT \
   "Send more content you stingy fuck nOoo~ you're so sexy aha 😘\n"
 
+#define ERR_NO_MSG (-1)
+#define ERR_INVALID_RCPT (-2)
+#define ERR_OPEN (-3)
+
 #define p(...)            \
   if (DEBUG) {            \
     printf("\033[0;32m"); \
@@ -209,11 +213,21 @@ void testParsers(int mama, char **moo) {
 // these do not necessarily need to be in their own function but they are temporarily for compilation
 
 int handleGetUserCert(char *cert, bstring recipient) {
-  return getusercert(cert, recipient);
+  int ret = getusercert(cert, recipient);
+  if (ret == 1) {
+    return ERR_INVALID_RCPT;
+  } else if (ret == 2) {
+    return ERR_OPEN;
+  }
+  return 0;
 }
 
 int handleSendMsg(bstring recipient, bstring msg) {
-  return sendmessage(recipient, msg);
+  int ret = sendmessage(recipient, msg);
+  if (ret == -1) {
+    return ERR_OPEN;
+  }
+  return 0;
 }
 
 // msg must be free()d by caller
@@ -223,9 +237,13 @@ int handleRecvMsg(bstring recipient, char **msg) {
   bstring filename = bfromcstr("");
   if (getOldestFilename(recipient, filename) == -1) {
     fprintf(stderr, "No message to receive\n");
-    return -1;
+    return ERR_NO_MSG;
   }
-  return recvmessage(filename, msg);
+  int ret = recvmessage(filename, msg);
+  if (ret == -1) {
+    return ERR_OPEN;
+  }
+  return 0;
 }
 // free(msg);
 

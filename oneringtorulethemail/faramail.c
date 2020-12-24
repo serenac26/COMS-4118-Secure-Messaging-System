@@ -28,6 +28,13 @@
 #define ERR_INSUFFICIENT_CONTENT_SENT \
   "Send more content you stingy fuck nOoo~ you're so sexy aha 😘\n"
 
+#define ERR_BAD_USERNAME (-1)
+#define ERR_WRONG_PASSWORD (-2)
+#define ERR_OPEN (-3)
+#define ERR_PENDING_MSG (-4)
+#define ERR_CERT_EXISTS (-5)
+
+
 #define p(...)            \
   if (DEBUG) {            \
     printf("\033[0;34m"); \
@@ -202,8 +209,8 @@ void testParsers(int mama, char **moo) {
 // caller should allocate MAX_CERT_SIZE bytes to cert
 // cert will be filled with the new certificate contents
 // cert will be written to ca/intermediate/certs/username.cert.pem
-// on success returns the length of the cert
-int handleGetCert(char *cert, bstring busername, bstring bpw, bstring bcsr) {
+// n is the length of the cert
+int handleGetCert(char *cert, bstring busername, bstring bpw, bstring bcsr, int *n) {
   char *username = (char *)busername->data;
   char *pw = (char *)bpw->data;
   char *csr = (char *)bcsr->data;
@@ -211,25 +218,33 @@ int handleGetCert(char *cert, bstring busername, bstring bpw, bstring bcsr) {
   int lret = login(username, pw);
   if (lret == 1) {
     fprintf(stderr, "Login failed: bad username\n");
-    return -1;
+    return ERR_BAD_USERNAME;
   } else if (lret == 2) {
     fprintf(stderr, "Login failed: incorrect password\n");
-    return -1;
+    return ERR_WRONG_PASSWORD;
   }
   printf("Login successful\n");
   if (addcsr(csr, username) == -1) {
     fprintf(stderr, "Could not generate certificate\n");
-    return -1;
+    return ERR_OPEN;
   }
-  return getcert(cert, username, 0);
+  int ret = getcert(cert, username, n, 0);
+  if (ret == -1) {
+    fprintf(stderr, "Could not generate certificate\n");
+    return ERR_OPEN;
+  } else if (ret == 1) {
+    return ERR_CERT_EXISTS;
+  } else {
+    return 0;
+  }
 }
 
 // caller should allocate MAX_CERT_SIZE bytes to cert
 // change password only if mailbox is empty
 // cert will be filled with the new certificate contents
 // cert will be written to ca/intermediate/certs/username.cert.pem
-// on success returns the length of the cert
-int handleChangePw(char *cert, bstring busername, bstring boldpw, bstring bnewpw, bstring bcsr) {
+// n is the length of the cert
+int handleChangePw(char *cert, bstring busername, bstring boldpw, bstring bnewpw, bstring bcsr, int *n) {
   char *username = (char *)busername->data;
   char *oldpw = (char *)boldpw->data;
   char *newpw = (char *)bnewpw->data;
@@ -238,28 +253,36 @@ int handleChangePw(char *cert, bstring busername, bstring boldpw, bstring bnewpw
   int lret = login(username, oldpw);
   if (lret == 1) {
     fprintf(stderr, "Login failed: bad username\n");
-    return -1;
+    return ERR_BAD_USERNAME;
   } else if (lret == 2) {
     fprintf(stderr, "Login failed: incorrect password\n");
-    return -1;
+    return ERR_WRONG_PASSWORD;
   }
   int cret = checkmail(username);
   if (cret == 1) {
     fprintf(stderr, "Error checking mailbox. Password not changed.\n");
-    return -1;
+    return ERR_OPEN;
   } else if (cret == 2) {
     fprintf(stderr, "Mailbox is not empty. Password not changed.\n");
-    return -1;
+    return ERR_PENDING_MSG;
   }
   if (changepw(username, newpw) != 0) {
     fprintf(stderr, "Error changing password\n");
-    return -1;
+    return ERR_OPEN;
   }
   if (addcsr(csr, username) == -1) {
     fprintf(stderr, "Could not generate certificate\n");
-    return -1;
+    return ERR_OPEN;
   }
-  return getcert(cert, username, 1);
+  int ret = getcert(cert, username, n, 1);
+  if (ret == -1) {
+    fprintf(stderr, "Could not generate certificate\n");
+    return ERR_OPEN;
+  } else if (ret == 1) {
+    return ERR_CERT_EXISTS;
+  } else {
+    return 0;
+  }
 }
 
 // Refer to:

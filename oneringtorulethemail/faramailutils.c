@@ -104,8 +104,9 @@ int addcsr(char *csr, char *username) {
 // cert MUST be at least MAX_CERT_SIZE
 // revoke: 0 do not replace certificate if it already exists
 // revoke: 1 replace certificate
-// on success returns length of certificate
-int getcert(char *cert, char *username, int revoke) {
+// sets n to length of certificate
+// return 0 if certificate replaced, 1 if certificate not changed, -1 on error
+int getcert(char *cert, char *username, int *n, int revoke) {
     // path relative to server directory
     char relclientcert[50];
     // path relative to current directory
@@ -129,7 +130,8 @@ int getcert(char *cert, char *username, int revoke) {
         printf("%s\n", clientcert);
         printf("%s\n", cert);
         BIO_free(certbio);
-        return nread;
+        *n = nread;
+        return 1;
     } else {
         char *args[5] = {"getcert.sh", relclientcert, relclientreq, IMCNF, NULL};
         pid_t pid = fork();
@@ -149,7 +151,8 @@ int getcert(char *cert, char *username, int revoke) {
                 printf("%s\n", clientcert);
                 printf("%s\n", cert);
                 BIO_free(certbio);
-                return nread;
+                *n = nread;
+                return 0;
             }
             return -1;
         }
