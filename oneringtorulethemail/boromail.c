@@ -163,6 +163,41 @@ int parseOptionLine(char *data, struct OptionLine *ol) {
   return 0;
 }
 
+/*
+ * Writes the option line requested to buf
+ * Unlike specified in
+ * https://www.cs.columbia.edu/~smb/classes/f20/Files/simple-http.html Looks for
+ * a semicolon
+ * ===
+ * 1 no match found
+ * 0 match found and written to result
+ */
+int parseSubject(char *data, bstring result) {
+  regex_t reg;
+  int value;
+
+  value = regcomp(&reg,
+                  "/C=US/ST=NY/O=.*/OU=client_.*/CN=(.*)/",
+                  REG_EXTENDED | REG_ICASE);
+  if (value != 0) {
+    pb("Regex did not compile successfully\n");
+  }
+  regmatch_t match[2];
+  int test = regexec(&reg, data, 2, match, 0);
+
+  if (test == REG_NOMATCH)
+    return 1;
+
+  bstring bdata = bfromcstr(data);
+  bstring _result = bmidstr(bdata, match[1].rm_so, match[1].rm_eo - match[1].rm_so);
+  bdestroy(bdata);
+  bassign(result, _result);
+  bdestroy(_result);
+
+  regfree(&reg);
+  return 0;
+}
+
 int create_socket(int port) {
   int s;
   struct sockaddr_in addr;
@@ -633,10 +668,17 @@ int main(int mama, char **moo) {
         } else if (action == 2 && bstrccmp(path, "/receivemsg") == 0) {
           X509 *cert = SSL_get_peer_certificate(ssl);
           X509_NAME *certname = X509_get_subject_name(cert);
-          char *_recipient = X509_NAME_oneline(certname, NULL, 0);
+          char *_subject = X509_NAME_oneline(certname, NULL, 0);
 
-          bstring recipient = bfromcstr(_recipient);
-          free(_recipient);
+          bstring recipient = NULL;
+          if (parseSubject(_subject, recipient) != 0) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
+            free(_subject);
+            connection = 2;
+            goto cleanup;
+          }
+          free(_subject);
 
           struct bstrList *lines = bsplit(bdata, '\n');
           if (lines->qty != 1) {
