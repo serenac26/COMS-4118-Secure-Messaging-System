@@ -64,24 +64,12 @@ faramailutils: faramailutils.o utils.o $(BSTROBJS)
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
 	sudo cp faramailutils $(TREE)/server/bin
 
+gollumutils: gollumutils.o utils.o $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+
 servercomponents: verifysign msgout
 	sudo mv $^ $(TREE)/server/bin
-	
-verifysign: verifysign.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
-
-encryptmsg: encryptmsg.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
-
-decryptmsg: decryptmsg.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
-
-signmsg: signmsg.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
 # End testing
 	
 client: send-msg recv-msg
@@ -99,16 +87,16 @@ change-pw: change-pw.o utils.o $(BSTROBJS)
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
 #
 
-send-msg: send-msg.o utils.o encryptmsg.o signmsg.o $(BSTROBJS)
+send-msg: send-msg.o utils.o gollumutils.o $(BSTROBJS)
 	echo Linking: $@
-	$(CC) $< utils.o encryptmsg.o signmsg.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o gollumutils.o $(BSTROBJS) -o $@ $(LFLAGS)
 
-recv-msg: recv-msg.o utils.o decryptmsg.o $(BSTROBJS)
+recv-msg: recv-msg.o gollumutils.o $(BSTROBJS)
 	echo Linking: $@
-	$(CC) $< utils.o decryptmsg.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o gollumutils.o $(BSTROBJS) -o $@ $(LFLAGS)
 
 clean:
-	rm -f pemithor boromail boromailutils faramail faramailutils verifysign msgout signmsg encryptmsg decryptmsg get-cert change-pw send-msg recv-msg *.o
+	rm -f pemithor boromail boromailutils faramail faramailutils gollumutils get-cert change-pw send-msg recv-msg *.o
 
 .PHONY : all
 .PHONY : install
