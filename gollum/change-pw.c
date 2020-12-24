@@ -148,12 +148,16 @@ sbio=BIO_new(BIO_s_socket());
     sprintf(csrLine, "csr: %s\n", csr);
 
    //+1 for new line
-    int contentLength = strlen(username) + strlen(password) + strlen(csr) + 1;
+    int contentLength = strlen(usernameLine) + strlen(passwordLine) + strlen(newPasswordLine) + strlen(csrLine) + 1;
     sprintf(header3, "content-length: %d\n", contentLength);
     sprintf(buffer, "%s%s%s%s%s%s%s%s%s", header, header2, header3, "\n", usernameLine, passwordLine, newPasswordLine, csrLine, "\n");
     SSL_write(ssl, buffer, strlen(buffer));
-    //should do read 
-    //check read and return good or bad to user 
+    //read buff
+    //check for 200 okay
+    //if good, read the data (somehow)
+    //ask the user for the file they want stored
+    //write this data to the file from a buffer
+    //output "it is output here" 
     free(privatekey);
     free(csr);
     return 0;

@@ -12,16 +12,19 @@
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
-
+//./get-cert <username> <privatekeyfile>
 int main(int argc, char *argv[]) {
-    char *username = getpass("Enter username: ");
+    if (argc != 2) {
+        fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file\n");
+    }
+    char *username = argv[1];
     char *password = getpass("Enter password: ");
 
     if ((strlen(username) > 32 ) || (strlen(password)>32)) {
         printf("input too large: must be 32 or less characters\n");
     }
 
-    char *privatekeyfile = getpass("Enter privatekey file: ");
+    char *privatekeyfile = argv[2];
     FILE *fp;
     fp = fopen(privatekeyfile, "r+");
     fseek(fp, 0, SEEK_END);
@@ -94,6 +97,29 @@ int main(int argc, char *argv[]) {
     //GET /HTTP/1.0
     //write to file and give to user. 
 
+    int bytes = (1024*1024);
+    int port = 4200;
+    char *method = "getcert";
+    char *buffer = (char *) malloc(sizeof(char)*bytes);
+
+    char header[100];
+    sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", port, method);
+    char *header 2 = "connection: close\n";
+    char header3[100];
+
+    char usernameLine[sizeof(username)+strlen("username: \n")];
+    sprintf(usernameLine, "username: %s\n", username);
+    char passwordLine[sizeof(password)+strlen("password: \n")];
+    sprintf(passwordLine, "password: %s\n", password);
+
+    char csrLine[strlen(csr) + strlen("csr: \n")];
+    sprintf(csrLine, "csr: %s\n", csr);
+
+    int contentLength = strlen(usernameLine) + strlen(passwordLine) + strlen(csrLine) + 1;
+    sprintf(buffer, "%s%s%s%s%s%s%s%s", header, header2, header3, "\n", usernameLine, passwordLine, csrLine, "\n");
+    SSL_write(ssl, buffer, strlen(buffer));
+
     free(privatekey);
+    free(csr);
     return 0;
 }
