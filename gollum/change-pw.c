@@ -136,16 +136,16 @@ sbio=BIO_new(BIO_s_socket());
     char *header2 = "connection: close\n";
     char header3[100];
 
-    char usernameLine[sizeof(username)+strlen("username: \n")];
-    sprintf(usernameLine, "username: %s\n", username);
+    char usernameLine[sizeof(username)+strlen("username:\n")];
+    sprintf(usernameLine, "username:%s\n", username);
 
-    char passwordLine[sizeof(password)+strlen("password: \n")];
-    sprintf(passwordLine, "password: %s\n", password);
+    char passwordLine[sizeof(password)+strlen("password:\n")];
+    sprintf(passwordLine, "password:%s\n", password);
 
-    char newPasswordLine[sizeof(newPassword)+strlen("new password: \n")];
-    sprintf(newPasswordLine, "new password: %s\n", newPassword);
-    char csrLine[strlen(csr) + strlen("csr: \n")];
-    sprintf(csrLine, "csr: %s\n", csr);
+    char newPasswordLine[sizeof(newPassword)+strlen("newpassword:\n")];
+    sprintf(newPasswordLine, "newpassword:%s\n", newPassword);
+    char csrLine[strlen(csr) + strlen("csr:\n")];
+    sprintf(csrLine, "csr:%s\n", csr);
 
    //+1 for new line
     int contentLength = strlen(usernameLine) + strlen(passwordLine) + strlen(newPasswordLine) + strlen(csrLine) + 1;

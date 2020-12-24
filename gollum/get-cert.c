@@ -107,13 +107,13 @@ int main(int argc, char *argv[]) {
     char *header 2 = "connection: close\n";
     char header3[100];
 
-    char usernameLine[sizeof(username)+strlen("username: \n")];
-    sprintf(usernameLine, "username: %s\n", username);
-    char passwordLine[sizeof(password)+strlen("password: \n")];
-    sprintf(passwordLine, "password: %s\n", password);
+    char usernameLine[sizeof(username)+strlen("username:\n")];
+    sprintf(usernameLine, "username:%s\n", username);
+    char passwordLine[sizeof(password)+strlen("password:\n")];
+    sprintf(passwordLine, "password:%s\n", password);
 
-    char csrLine[strlen(csr) + strlen("csr: \n")];
-    sprintf(csrLine, "csr: %s\n", csr);
+    char csrLine[strlen(csr) + strlen("csr:\n")];
+    sprintf(csrLine, "csr:%s\n", csr);
 
     int contentLength = strlen(usernameLine) + strlen(passwordLine) + strlen(csrLine) + 1;
     sprintf(buffer, "%s%s%s%s%s%s%s%s", header, header2, header3, "\n", usernameLine, passwordLine, csrLine, "\n");
