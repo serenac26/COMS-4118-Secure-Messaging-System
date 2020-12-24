@@ -8,13 +8,15 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "bstrlib.h"
-#include "utf8util.h"
-#include "buniutil.h"
-#include "bstraux.h"
-#include "bsafe.h"
-#include "bstrlibext.h"
+
 #include "boromailutils.h"
+#include "bsafe.h"
+#include "bstraux.h"
+#include "bstrlib.h"
+#include "bstrlibext.h"
+#include "buniutil.h"
+#include "utf8util.h"
+#include "utils.h"
 
 #define DEBUG 1
 #define READBUF_SIZE 1000
@@ -27,12 +29,13 @@
   "Connection must be either close or keep-alive\n"
 #define ERR_INSUFFICIENT_CONTENT_SENT \
   "Send more content you stingy fuck nOoo~ you're so sexy aha 😘\n"
+#define ERR_MALFORMED_REQUEST "Your request body was malformed\n"
 
 #define ERR_NO_MSG (-1)
 #define ERR_INVALID_RCPT (-2)
 #define ERR_OPEN (-3)
 
-#define p(...)            \
+#define pb(...)           \
   if (DEBUG) {            \
     printf("\033[0;32m"); \
     printf("Boromail: "); \
@@ -68,7 +71,7 @@ int parseVerbLine(char *data, struct VerbLine *vl) {
                   "([^[:space:]]+)\n",
                   REG_EXTENDED | REG_ICASE);
   if (value != 0) {
-    p("Regex did not compile successfully\n");
+    pb("Regex did not compile successfully\n");
   }
   regmatch_t match[6];
   int test = regexec(&reg, data, 6, match, 0);
@@ -131,7 +134,7 @@ int parseOptionLine(char *data, struct OptionLine *ol) {
                   "[[:space:]]*(.*)[[:space:]]*:[[:space:]]*(.*)[[:space:]]*\n",
                   REG_EXTENDED | REG_ICASE);
   if (value != 0) {
-    p("Regex did not compile successfully\n");
+    pb("Regex did not compile successfully\n");
   }
   regmatch_t match[3];
   int test = regexec(&reg, data, 3, match, 0);
@@ -189,7 +192,7 @@ int create_socket(int port) {
 
 int verify_callback(int ok, X509_STORE_CTX *ctx) {
   /* Tolerate certificate expiration */
-  p("verify callback error: %d\n", X509_STORE_CTX_get_error(ctx));
+  pb("verify callback error: %d\n", X509_STORE_CTX_get_error(ctx));
   /* Otherwise don't override */
   return ok;
 }
@@ -198,19 +201,20 @@ void testParsers(int mama, char **moo) {
   struct VerbLine vl;
   char *yeet = "post https://www.rbbridge.com:8080/sendmsg/goodgod HTTP/1.1";
   int result = parseVerbLine(yeet, &vl);
-  p("%d %s\n", result, vl.verb);
-  p("%d %s\n", result, vl.port);
-  p("%d %s\n", result, vl.path);
-  p("%d %s\n", result, vl.version);
+  pb("%d %s\n", result, vl.verb);
+  pb("%d %s\n", result, vl.port);
+  pb("%d %s\n", result, vl.path);
+  pb("%d %s\n", result, vl.version);
 
   struct OptionLine ol;
   char *yeet2 = "connection: keep-alive";
   int result2 = parseOptionLine(yeet2, &ol);
-  p("%d %s\n", result2, ol.header);
-  p("%d %s\n", result2, ol.value);
+  pb("%d %s\n", result2, ol.header);
+  pb("%d %s\n", result2, ol.value);
 }
 
-// these do not necessarily need to be in their own function but they are temporarily for compilation
+// these do not necessarily need to be in their own function but they are
+// temporarily for compilation
 
 int handleGetUserCert(char *cert, bstring recipient) {
   int ret = getusercert(cert, recipient);
@@ -246,6 +250,22 @@ int handleRecvMsg(bstring recipient, char **msg) {
   return 0;
 }
 // free(msg);
+
+void sendGood(SSL *ssl, int connection, void *content) {
+  bstring toSend = bformat("200 OK\nconnection: %s\ncontent-length: %d\n\n%s\n",
+                           connection == 2 ? "close" : "keep-alive",
+                           strlen(content) + 1, content);
+  SSL_write(ssl, toSend->data, toSend->slen);
+  bdestroy(toSend);
+}
+
+void sendBad(SSL *ssl, void *content) {
+  bstring toSend =
+      bformat("400 Bad Request \nconnection: close\ncontent-length: %d\n\n%s\n",
+              strlen(content) + 1, content);
+  SSL_write(ssl, toSend->data, toSend->slen);
+  bdestroy(toSend);
+}
 
 // Refer to:
 // http://h30266.www3.hpe.com/odl/axpos/opsys/vmsos84/BA554_90007/ch04s03.html
@@ -309,7 +329,7 @@ int main(int mama, char **moo) {
       exit(EXIT_FAILURE);
     }
 
-    p("Connection from %x, port %x\n", addr.sin_addr.s_addr, addr.sin_port);
+    pb("Connection from %x, port %x\n", addr.sin_addr.s_addr, addr.sin_port);
 
     SSL_set_fd(ssl, client);
 
@@ -337,7 +357,12 @@ int main(int mama, char **moo) {
     int state = 0;
 
     /*
-     * Set by an option line
+     * Only one verb line
+     */
+    struct VerbLine vl;
+
+    /*
+     * Set by a verb line
      * ===
      * -1 Unset
      * 1 Get
@@ -346,14 +371,14 @@ int main(int mama, char **moo) {
     int action = -1;
 
     /*
-     * Set by a verb line
+     * Set by an option line
      * ===
      * -1 Unset
      */
     int contentLength = -1;
 
     /*
-     * Set by a verb line. Default to close
+     * Set by an option line. Default to close
      * ===
      * 1 keep-alive
      * 2 close
@@ -365,15 +390,14 @@ int main(int mama, char **moo) {
     while (1) {
       memset(rbuf, '\0', sizeof(rbuf));
       int readReturn = SSL_read(ssl, rbuf, sizeof(rbuf) - 1);
-      p("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
+      pb("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
       if (readReturn <= 0) {
-        p("error: %d %d\n", SSL_get_error(ssl, readReturn), errno);
+        pb("error: %d %d\n", SSL_get_error(ssl, readReturn), errno);
         break;
       } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
         SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
         break;
       } else if (state == 0) {
-        struct VerbLine vl;
         int result = parseVerbLine(rbuf, &vl);
         if (result == 2) {
           SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
@@ -438,10 +462,10 @@ int main(int mama, char **moo) {
           break;
         }
 
-        data = (char *)malloc(contentLength);
+        data = (char *)malloc(contentLength + 1);
         memset(data, '\0', contentLength);
 
-        // p("%ld %ld %s\n", strlen(rbuf), sizeof(rbuf), rbuf);
+        // pb("%ld %ld %s\n", strlen(rbuf), sizeof(rbuf), rbuf);
         memcpy(data, rbuf, strlen(rbuf));
         int contentReceived = strlen(rbuf);
 
@@ -508,8 +532,140 @@ int main(int mama, char **moo) {
          yeet
 
          */
-        p("state: %d\naction: %d\ncontentLength: %d\nconnection: %d\n%s\n",
-          state, action, contentLength, connection, data);
+        pb("state: %d\naction: %d\ncontentLength: %d\nconnection: %d\n%s\n",
+           state, action, contentLength, connection, data);
+
+        bstring bdata = bfromcstr(data);
+
+        bstring path = bfromcstr(vl.path);
+        if (action == 2 && bstrccmp(path, "/getusercert") == 0) {
+          struct bstrList *lines = bsplit(bdata, '\n');
+          if (lines->qty != 2) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+          bstring recipientkey = NULL, recipientvalue = NULL;
+          if (deserializeData(recipientkey, recipientvalue, lines->entry[0],
+                              0) != 0 ||
+              bstrccmp(recipientkey, "recipient") != 0) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
+            bdestroy(recipientkey);
+            bdestroy(recipientvalue);
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+          char cert[MAX_CERT_SIZE];
+          memset(cert, '\0', sizeof(cert));
+          int r;
+          if ((r = handleGetUserCert(cert, recipientvalue)) != 0) {
+            bstring err = bformat("%s: %d", ERR_MALFORMED_REQUEST, r);
+            sendBad(ssl, err->data);
+            bdestroy(err);
+            bdestroy(recipientkey);
+            bdestroy(recipientvalue);
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+
+          bstring certKey = bfromcstr("certificate");
+          bstring certValue = bfromcstr(cert);
+          bstring certData = NULL;
+          if (serializeData(certKey, certValue, certData, 1) != 0) {
+            bdestroy(certKey);
+            bdestroy(certValue);
+            bdestroy(certData);
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
+            connection = 2;
+            goto cleanup;
+          };
+          bdestroy(certKey);
+          bdestroy(certValue);
+          sendGood(ssl, 2, certData->data);
+          bdestroy(certData);
+        } else if (action == 2 && bstrccmp(path, "/sendmsg") == 0) {
+          struct bstrList *lines = bsplit(bdata, '\n');
+          if (lines->qty != 3) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+          bstring recipientkey = NULL, recipientvalue = NULL, messagekey = NULL,
+                  messagevalue = NULL;
+          if (deserializeData(recipientkey, recipientvalue, lines->entry[0],
+                              0) != 0 ||
+              deserializeData(messagekey, messagevalue, lines->entry[1], 0) !=
+                  0 ||
+              bstrccmp(recipientkey, "recipient") != 0 ||
+              bstrccmp(messagekey, "message") != 0) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
+            bdestroy(recipientkey);
+            bdestroy(recipientvalue);
+            bdestroy(messagekey);
+            bdestroy(messagevalue);
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+          int r;
+          if ((r = handleSendMsg(recipientvalue, messagevalue)) != 0) {
+            bstring err = bformat("%s: %d", ERR_MALFORMED_REQUEST, r);
+            sendBad(ssl, err->data);
+            bdestroy(err);
+            bdestroy(recipientkey);
+            bdestroy(recipientvalue);
+            bdestroy(messagekey);
+            bdestroy(messagevalue);
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+
+          sendGood(ssl, connection, "");
+        } else if (action == 2 && bstrccmp(path, "/receivemsg") == 0) {
+          X509 *cert = SSL_get_peer_certificate(ssl);
+          X509_NAME *certname = X509_get_subject_name(cert);
+          char *_recipient = X509_NAME_oneline(certname, NULL, 0);
+
+          bstring recipient = bfromcstr(_recipient);
+          free(_recipient);
+
+          struct bstrList *lines = bsplit(bdata, '\n');
+          if (lines->qty != 1) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+          int r;
+          char *msg;
+          if ((r = handleRecvMsg(recipient, &msg)) != 0) {
+            bstring err = bformat("%s: %d", ERR_MALFORMED_REQUEST, r);
+            sendBad(ssl, err->data);
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+
+          sendGood(ssl, connection, msg);
+          free(msg);
+        } else {
+          sendBad(ssl, ERR_MALFORMED_REQUEST);
+          connection = 2;
+        }
+
+      cleanup:
+        bdestroy(bdata);
+        bdestroy(path);
 
         //
 
