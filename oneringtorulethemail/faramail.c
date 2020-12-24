@@ -10,13 +10,24 @@
 #include <openssl/err.h>
 #include "faramailutils.h"
 
+#define DEBUG 1
 #define READBUF_SIZE 1000
 #define WRITEBUF_SIZE 1000
 #define ERR_TOO_LONG "One or more of your fields were too loooooooooong\n"
 #define ERR_INVALID_LINE "Unexpected line encountered\n"
+#define ERR_MISSING_CONTENT_LENGTH "Content length must be supplied\n"
 #define ERR_INVALID_CONTENT_LENGTH "Content length must be a number\n"
 #define ERR_INVALID_CONNECTION_VALUE "Connection must be either close or keep-alive\n"
 #define ERR_INSUFFICIENT_CONTENT_SENT "Send more content you stingy fuck nOoo~ you're so sexy aha 😘\n"
+
+#define p(...)            \
+  if (DEBUG)              \
+  {                       \
+    printf("\u001b[34m"); \
+    printf("Faramail: "); \
+    printf(__VA_ARGS__);  \
+    printf("\033[0m");    \
+  }
 
 struct VerbLine
 {
@@ -47,7 +58,7 @@ int parseVerbLine(char *data, struct VerbLine *vl)
   value = regcomp(&reg, "(post|get) https://[a-z0-9.]+(:([0-9]+))*([^[:space:]]+) ([^[:space:]]+)\n", REG_EXTENDED | REG_ICASE);
   if (value != 0)
   {
-    printf("Regex did not compile successfully\n");
+    p("Regex did not compile successfully\n");
   }
   regmatch_t match[6];
   int test = regexec(&reg, data, 6, match, 0);
@@ -113,7 +124,7 @@ int parseOptionLine(char *data, struct OptionLine *ol)
   value = regcomp(&reg, "[[:space:]]*(.*)[[:space:]]*:[[:space:]]*(.*)[[:space:]]*\n", REG_EXTENDED | REG_ICASE);
   if (value != 0)
   {
-    printf("Regex did not compile successfully\n");
+    p("Regex did not compile successfully\n");
   }
   regmatch_t match[3];
   int test = regexec(&reg, data, 3, match, 0);
@@ -175,21 +186,21 @@ int create_socket(int port)
   return s;
 }
 
-int testParsers(int mama, char **moo)
+void testParsers(int mama, char **moo)
 {
   struct VerbLine vl;
   char *yeet = "post https://www.rbbridge.com:8080/sendmsg/goodgod HTTP/1.1";
   int result = parseVerbLine(yeet, &vl);
-  printf("%d %s\n", result, vl.verb);
-  printf("%d %s\n", result, vl.port);
-  printf("%d %s\n", result, vl.path);
-  printf("%d %s\n", result, vl.version);
+  p("%d %s\n", result, vl.verb);
+  p("%d %s\n", result, vl.port);
+  p("%d %s\n", result, vl.path);
+  p("%d %s\n", result, vl.version);
 
   struct OptionLine ol;
   char *yeet2 = "connection: keep-alive";
   int result2 = parseOptionLine(yeet2, &ol);
-  printf("%d %s\n", result2, ol.header);
-  printf("%d %s\n", result2, ol.value);
+  p("%d %s\n", result2, ol.header);
+  p("%d %s\n", result2, ol.value);
   return 0;
 }
 
@@ -276,7 +287,6 @@ int main(int mama, char **moo)
     struct sockaddr_in addr;
     uint len = sizeof(addr);
     SSL *ssl = SSL_new(ctx);
-    // const char reply[] = "test\n";
 
     int client = accept(sock, (struct sockaddr *)&addr, &len);
 
@@ -286,7 +296,7 @@ int main(int mama, char **moo)
       exit(EXIT_FAILURE);
     }
 
-    printf("Connection from %x, port %x\n", addr.sin_addr.s_addr, addr.sin_port);
+    p("Connection from %x, port %x\n", addr.sin_addr.s_addr, addr.sin_port);
 
     SSL_set_fd(ssl, client);
 
@@ -340,7 +350,7 @@ int main(int mama, char **moo)
     {
       memset(rbuf, '\0', sizeof(rbuf));
       int readReturn = SSL_read(ssl, rbuf, sizeof(rbuf) - 1);
-      printf("state: %d line: %s\n", state, rbuf);
+      p("state: %d line: %s\n", state, rbuf);
       if (readReturn == sizeof(rbuf) - 1 && state != 2)
       {
         SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
@@ -410,7 +420,6 @@ int main(int mama, char **moo)
           // atoi does no error checking. may need to use another function
           int parsedContentLength = atoi(ol.value);
           contentLength = parsedContentLength;
-
         }
         else if (strcmp(ol.header, "connection") == 0)
         {
@@ -427,15 +436,18 @@ int main(int mama, char **moo)
       }
       else if (state == 2)
       {
+        if (contentLength == -1)
+        {
+          SSL_write(ssl, ERR_MISSING_CONTENT_LENGTH, strlen(ERR_MISSING_CONTENT_LENGTH));
+          break;
+        }
 
         data = (char *)malloc(contentLength);
         memset(data, '\0', contentLength);
 
-
-        // printf("%ld %ld %s\n", strlen(rbuf), sizeof(rbuf), rbuf);
+        // p("%ld %ld %s\n", strlen(rbuf), sizeof(rbuf), rbuf);
         memcpy(data, rbuf, strlen(rbuf));
         int contentReceived = strlen(rbuf);
-
 
         while (contentReceived < contentLength)
         {
@@ -502,8 +514,8 @@ int main(int mama, char **moo)
          yeet
 
          */
-        printf("state: %d\naction: %d\ncontentLength: %d\nconnection: %d\n%s\n",
-               state, action, contentLength, connection, data);
+        p("state: %d\naction: %d\ncontentLength: %d\nconnection: %d\n%s\n",
+          state, action, contentLength, connection, data);
 
         //
 
