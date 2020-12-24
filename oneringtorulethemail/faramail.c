@@ -221,7 +221,7 @@ int handleGetCert(char *cert, bstring busername, bstring bpw, bstring bcsr) {
     fprintf(stderr, "Could not generate certificate\n");
     return -1;
   }
-  return getcert(cert, username);
+  return getcert(cert, username, 0);
 }
 
 // caller should allocate MAX_CERT_SIZE bytes to cert
@@ -259,7 +259,7 @@ int handleChangePw(char *cert, bstring busername, bstring boldpw, bstring bnewpw
     fprintf(stderr, "Could not generate certificate\n");
     return -1;
   }
-  return getcert(cert, username);
+  return getcert(cert, username, 1);
 }
 
 // Refer to:

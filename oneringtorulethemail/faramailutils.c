@@ -102,46 +102,58 @@ int addcsr(char *csr, char *username) {
 }
 
 // cert MUST be at least MAX_CERT_SIZE
+// revoke: 0 do not replace certificate if it already exists
+// revoke: 1 replace certificate
 // on success returns length of certificate
-int getcert(char *cert, char *username) {
+int getcert(char *cert, char *username, int revoke) {
     // path relative to server directory
     char relclientcert[50];
     // path relative to current directory
     char clientcert[53];
     char relclientreq[50];
+    struct stat filestat;
     memset(cert, '\0', MAX_CERT_SIZE);
     // DO NOT use CERT_PATH and CSR_PATH macros here
     sprintf(relclientcert, "ca/intermediate/certs/%s.cert.pem", username);
     sprintf(clientcert, "../%s", relclientcert);
     sprintf(relclientreq, "ca/intermediate/csr/%s.req.pem", username);
-    char *args[5] = {"getcert.sh", relclientcert, relclientreq, IMCNF, NULL};
-    pid_t pid = fork();
-    if (pid == 0) {
-        fflush(stdout);
-        execv("./getcert.sh", args);
+    if (revoke == 0 && stat(clientcert, &filestat) == 0) {
+        printf("Certificate already exists. To update your private key, please use changepw.\n");
+        BIO *certbio = NULL;
+        certbio = BIO_new_file(clientcert, "r");
+        if (!certbio) {
+            fprintf(stderr, "File open error: %s\n", clientcert);
+            return -1;
+        }
+        int nread = BIO_read(certbio, cert, MAX_CERT_SIZE);
+        printf("%s\n", clientcert);
+        printf("%s\n", cert);
+        BIO_free(certbio);
+        return nread;
     } else {
-        int status;
-        if (wait(&status) >= 0) {
-            printf("getcert process exited with %d status\n", WEXITSTATUS(status));
-            int fd = open(clientcert, O_RDONLY);
-            if (fd == -1) {
-                fprintf(stderr, "%s\n", clientcert);
-                perror("File open error");
-                return -1;
-            }
-            BIO *certbio = NULL;
-            certbio = BIO_new_file(clientcert, "r");
-            if (!certbio) {
+        char *args[5] = {"getcert.sh", relclientcert, relclientreq, IMCNF, NULL};
+        pid_t pid = fork();
+        if (pid == 0) {
+            execv("./getcert.sh", args);
+            return -1;
+        } else {
+            int status;
+            if (wait(&status) >= 0) {
+                BIO *certbio = NULL;
+                certbio = BIO_new_file(clientcert, "r");
+                if (!certbio) {
+                    fprintf(stderr, "File open error: %s\n", clientcert);
+                    return -1;
+                }
+                int nread = BIO_read(certbio, cert, MAX_CERT_SIZE);
+                printf("%s\n", clientcert);
+                printf("%s\n", cert);
                 BIO_free(certbio);
+                return nread;
             }
-            int nread = BIO_read(certbio, cert, MAX_CERT_SIZE);
-            printf("%s\n", clientcert);
-            printf("%s\n", cert);
-            BIO_free(certbio);
-            return nread;
+            return -1;
         }
     }
-    return -1;
 }
 
 // Testing
@@ -200,7 +212,7 @@ int getcert(char *cert, char *username) {
 //             perror("malloc error");
 //             return 1;
 //         }
-//         return getcert(cert, username);
+//         return getcert(cert, username, 0);
 //     }
 
 //     fprintf(stderr, "operation %s not supported\n", op);
