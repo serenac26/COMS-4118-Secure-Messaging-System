@@ -7,6 +7,6 @@ int sendmsg(bstring recipient, bstring msgin);
 
 int verifysign(char *sender, char *msg_file, char *ver_out_file);
 
-int recvmsg(char* ver_out_file, char** msgout);
+int recvmsg(char* msgfile, char** msgout);
 
 #endif

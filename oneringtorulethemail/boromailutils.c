@@ -188,7 +188,7 @@ int verifysign(char *sender, char *msg_file, char *ver_out_file) {
 }
 
 // msgout needs to be freed
-int recvmsg(char* ver_out_file, char** msgout) {
+int recvmsg(char* msgfile, char** msgout) {
     *msgout = malloc(MB);
     if (!*msgout) {
         perror("Malloc error");
@@ -198,10 +198,10 @@ int recvmsg(char* ver_out_file, char** msgout) {
     size_t size = 0;
     FILE *fp;
     
-    // Get message body from verified file
-    fp = fopen(ver_out_file, "r");
+    // Get message body from message file
+    fp = fopen(msgfile, "r");
     if (!fp) {
-        fprintf(stderr, "%s\n", ver_out_file);
+        fprintf(stderr, "%s\n", msgfile);
         perror("File open error");
         free(*msgout);
         return -1;
@@ -211,8 +211,8 @@ int recvmsg(char* ver_out_file, char** msgout) {
     }
     fclose(fp);
 
-    // Remove temp ver files
-    remove(ver_out_file);
+    // Remove message file
+    remove(msgfile);
     
     free(line);
     return 0;
@@ -283,16 +283,16 @@ int recvmsg(char* ver_out_file, char** msgout) {
 //     }
 
 //     if (strcmp(op, "recvmsg") == 0) {
-//         char *ver_out_file;
+//         char *msgfile;
 //         char *msgout;
 
 //         if (argc != 3) {
-//             fprintf(stderr, "bad arg count; usage: boromailutils recvmsg <veroutfile>\n");
+//             fprintf(stderr, "bad arg count; usage: boromailutils recvmsg <msgfile>\n");
 //             return 1;
 //         }
-//         ver_out_file = argv[2];
-//         int value = recvmsg(ver_out_file, &msgout);
-//         printf("msgout:\n%s", msgout);
+//         msgfile = argv[2];
+//         int value = recvmsg(msgfile, &msgout);
+//         printf("%s", msgout);
 //         free(msgout);
 //         return value;
 //     }
