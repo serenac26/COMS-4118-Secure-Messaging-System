@@ -95,6 +95,7 @@ send-msg: send-msg.o utils.o gollumutils.o $(BSTROBJS)
 recv-msg: recv-msg.o gollumutils.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o gollumutils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	sudo cp recv-msg $(TREE)/client/bin
 
 clean:
 	rm -f pemithor boromail boromailutils faramail faramailutils gollumutils get-cert change-pw send-msg recv-msg *.o

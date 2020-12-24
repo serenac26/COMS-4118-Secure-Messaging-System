@@ -425,51 +425,51 @@ int verifyunsign(char *signed_file, char *unverified_file) {
 }
 
 // Testing
-int main(int argc, char *argv[]) {
-    char *op;
-    if (argc < 2) {
-        fprintf(stderr, "bad arg count; usage: gollumutils <operation>\nsupported operations: encryptmsg decryptmsg signmsg verifysign");
-        return 1;
-    }
-    op = argv[1];
+// int main(int argc, char *argv[]) {
+//     char *op;
+//     if (argc < 2) {
+//         fprintf(stderr, "bad arg count; usage: gollumutils <operation>\nsupported operations: encryptmsg decryptmsg signmsg verifysign");
+//         return 1;
+//     }
+//     op = argv[1];
 
-    if (strcmp(op, "encryptmsg") == 0) {
-        if (argc < 5) {
-            fprintf(stderr, "bad arg count; usage: gollumutils encryptmsg <certfile> <plaintxtfile> <ciphertxtfile>\n");
-            return 1;
-        }
-        return encryptmsg(argv[2], argv[3], argv[4]);
-    }
+//     if (strcmp(op, "encryptmsg") == 0) {
+//         if (argc < 5) {
+//             fprintf(stderr, "bad arg count; usage: gollumutils encryptmsg <certfile> <plaintxtfile> <ciphertxtfile>\n");
+//             return 1;
+//         }
+//         return encryptmsg(argv[2], argv[3], argv[4]);
+//     }
 
-    if (strcmp(op, "decryptmsg") == 0) {
-        if (argc < 6) {
-            fprintf(stderr, "bad arg count; usage: gollumutils decryptmsg <certfile> <keyfile> <ciphertxtfile> <plaintxtfile>\n");
-            return 1;
-        }
-        return decryptmsg(argv[2], argv[3], argv[4], argv[5]);
-    }
+//     if (strcmp(op, "decryptmsg") == 0) {
+//         if (argc < 6) {
+//             fprintf(stderr, "bad arg count; usage: gollumutils decryptmsg <certfile> <keyfile> <ciphertxtfile> <plaintxtfile>\n");
+//             return 1;
+//         }
+//         return decryptmsg(argv[2], argv[3], argv[4], argv[5]);
+//     }
 
-    if (strcmp(op, "signmsg") == 0) {
-        if (argc < 6) {
-            fprintf(stderr, "bad arg count; usage: gollumutils signmsg <certfile> <keyfile> <msgin> <msgout>\n");
-            return 1;
-        }
-        return signmsg(argv[2], argv[3], argv[4], argv[5]);
-    }
+//     if (strcmp(op, "signmsg") == 0) {
+//         if (argc < 6) {
+//             fprintf(stderr, "bad arg count; usage: gollumutils signmsg <certfile> <keyfile> <msgin> <msgout>\n");
+//             return 1;
+//         }
+//         return signmsg(argv[2], argv[3], argv[4], argv[5]);
+//     }
 
-    if (strcmp(op, "verifysign") == 0) {
-        if (argc != 5) {
-            fprintf(stderr, "bad arg count; usage: gollumutils verifysign <certfile> <msgfile> <veroutfile>\n");
-            return 1;
-        }
-        return verifysign(argv[2], argv[3], argv[4]);
-    }
+//     if (strcmp(op, "verifysign") == 0) {
+//         if (argc != 5) {
+//             fprintf(stderr, "bad arg count; usage: gollumutils verifysign <certfile> <msgfile> <veroutfile>\n");
+//             return 1;
+//         }
+//         return verifysign(argv[2], argv[3], argv[4]);
+//     }
 
-    if (strcmp(op, "verifyunsign") == 0) {
-        if (argc != 4) {
-            fprintf(stderr, "bad arg count; usage: gollumutils verifyunsign <msgfile> <unveroutfile>\n");
-            return 1;
-        }
-        return verifyunsign(argv[2], argv[3]);
-    }
-}
+//     if (strcmp(op, "verifyunsign") == 0) {
+//         if (argc != 4) {
+//             fprintf(stderr, "bad arg count; usage: gollumutils verifyunsign <msgfile> <unveroutfile>\n");
+//             return 1;
+//         }
+//         return verifyunsign(argv[2], argv[3]);
+//     }
+// }

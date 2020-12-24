@@ -32,8 +32,8 @@ int main(int argc, char *argv[]) {
   size_t size = 0;
   FILE *fp;
   char *r_certfile = "recipient.cert.pem"; 
-  char *encrypted_file = "encrypted-msg";
-  char *signed_file = "signed-msg";
+  char *unsigned_encrypted_file = "unsigned.encrypted.msg";
+  char *signed_encrypted_file = "signed.encrypted.msg";
 
   if (argc != 4) {
     fprintf(stderr, "bad arg count; usage: send-msg <cert-file> <key-file> <msg-in-file>\n");
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
   }
 
   regex_t mailfrom;
-  if (0 != regcomp(&mailfrom, "^\\.?mail from:<([a-z0-9\\+\\-_]+)>\n$", REG_EXTENDED | REG_ICASE)) {
+  if (0 != regcomp(&mailfrom, "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$", REG_EXTENDED | REG_ICASE)) {
     perror("Regex did not compile successfully");
     fclose(fp);
     return -2;
@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
 
   // Read recipient lines
   regex_t rcptto;
-  if (regcomp(&rcptto, "^\\.?rcpt to:<([a-z0-9\\+\\-_]+)>\n$", REG_EXTENDED | REG_ICASE) != 0) {
+  if (regcomp(&rcptto, "^\\.?rcpt to:<([a-z0-9\\+\\-_]+)>[\r]*\n$", REG_EXTENDED | REG_ICASE) != 0) {
     perror("Regex did not compile successfully");
     fclose(fp);
     return -2;
@@ -231,20 +231,20 @@ int main(int argc, char *argv[]) {
 
 
 
-    // Encrypt the message with recipient cert and write to temp file encrypted-msg
-    encryptmsg(r_certfile, msginfile, encrypted_file);
+    // Encrypt the message with recipient cert and write to temp file unsigned.encrypted.msg
+    encryptmsg(r_certfile, msginfile, unsigned_encrypted_file);
 
 
-    // Sign the encrypted message with the sender's private key and write to temp file signed-msg
-    signmsg(certfile, keyfile, encrypted_file, signed_file);
+    // Sign the encrypted message with the sender's private key and write to temp file signed.encrypted.msg
+    signmsg(certfile, keyfile, unsigned_encrypted_file, signed_encrypted_file);
     
 
     // Read the signed, encrypted message into buffer
     buffer = (char *)malloc(MB);
     *buffer = '\0';
-    fp = fopen(signed_file, "r");
+    fp = fopen(signed_encrypted_file, "r");
     if (!fp) {
-        fprintf(stderr, "%s\n", signed_file);
+        fprintf(stderr, "%s\n", signed_encrypted_file);
         perror("File open error");
         free(buffer);
         freeList(rcpts);
@@ -271,8 +271,8 @@ int main(int argc, char *argv[]) {
 
     // Delete temp files
     remove(r_certfile);
-    remove(encrypted_file);
-    remove(signed_file);
+    remove(unsigned_encrypted_file);
+    remove(signed_encrypted_file);
     curr = curr->next;
   }
 
