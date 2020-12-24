@@ -11,13 +11,23 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
+// usage: recv-msg <cert-file> <key-file> <msg-out-file>
+
+// 1. read in certificate from input cert file name (argv[1])
+// 2. send certificate to server /verifycert
+// 3. gets a signed encrypted message from server and write to temp file signed-msg
+// 4. get encrypted message from signed-msg using cms_verify and CMS_NO_SIGNER_CERT_VERIFY flag to temp file encrypted-msg
+// 5. decrypt encrypted-msg using recipient's private key (argv[2]) and write to temp file decrypted-msg
+// 6. parse sender info from decrypted-msg header FROM:
+// 7. send sender name to server /verifysign
+// 8. gets sender ca chain and write to temp file sender-chain.cert.pem
+// 9. verify sender of signed-message with cms_verify using sender-chain.cert.pem
+// 9. write the decrypted message to the specified output file (argv[3])
+// 10. delete temp files (signed-msg, decrypted-msg, sender-chain.cert.pem)
+
 int main(int argc, char *argv[]) {
     char *certificate = getpass("Enter certificate: ");
-//pass in receive message 
-//send certificate 
-//server sends back response decrypt message, 
-//need private key to decrypt message
-//:) 
+
     SSL_CTX *ctx;
     SSL *ssl;
     const SSL_METHOD *meth; 
