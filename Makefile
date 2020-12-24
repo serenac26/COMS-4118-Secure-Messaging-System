@@ -65,6 +65,22 @@ verifysign: verifysign.o
 msgout: msgout.o utils.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+# End testing
+	
+client: signmsg encryptmsg decryptmsg send-msg recv-msg
+	sudo mv $^ $(TREE)/client/bin
+	sudo cp $(GOLLUM)/makecsr.sh $(GOLLUM)/genkey.sh $(TREE)/client/bin
+	sudo cp imopenssl.cnf $(TREE)/client
+
+# Not compiling yet
+get-cert: get-cert.o utils.o $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+
+change-pw: change-pw.o utils.o $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+#
 
 send-msg: send-msg.o utils.o $(BSTROBJS)
 	echo Linking: $@
@@ -73,14 +89,6 @@ send-msg: send-msg.o utils.o $(BSTROBJS)
 recv-msg: recv-msg.o utils.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
-
-# End testing
-	
-client: signmsg encryptmsg decryptmsg
-	sudo mv $^ $(TREE)/client/bin
-	sudo cp $(GOLLUM)/makecsr.sh $(GOLLUM)/genkey.sh $(TREE)/client/bin
-	sudo cp imopenssl.cnf $(TREE)/client
 
 signmsg: signmsg.o
 	echo Linking: $@
@@ -99,7 +107,7 @@ decryptmsg: decryptmsg.o
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg send-msg recv-msg *.o
+	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg get-cert change-pw send-msg recv-msg *.o
 
 .PHONY : all
 .PHONY : install
