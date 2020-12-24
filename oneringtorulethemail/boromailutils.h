@@ -1,10 +1,12 @@
 #ifndef __BOROMAILUTILS_H__
 #define __BOROMAILUTILS_H__
 
-struct Node *getrecipientcerts(struct Node *recipients);
+int getrecipientcert(char *cert, bstring recipient);
 
-int sendmsg(bstring sender, struct Node *recipient, struct Node *recipients, bstring msgin);
+int sendmsg(bstring recipient, bstring msgin);
 
-// add verify sign and msgout
+int verifysign(char *sender, char *msg_file, char *ver_out_file);
+
+int recvmsg(char* msgfile, char** msgout);
 
 #endif
