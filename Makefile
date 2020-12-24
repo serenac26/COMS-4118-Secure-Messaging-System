@@ -4,9 +4,8 @@ LD = gcc
 BSTRDIR = ./bstrlib
 ONERING = ./oneringtorulethemail
 GOLLUM = ./gollum
-INCLUDES = -I$(BSTRDIR)
+INCLUDES = -I$(BSTRDIR) -I./
 BSTROBJS = bstrlib.o bstrlibext.o
-SERVERUTILS = utils.o faramailutils.o boromailutils.o
 DEFINES =
 LFLAGS = -L/usr/lib/ -L./bstrlib -lm -lssl -lcrypt -lcrypto
 CFLAGS = -O3 -Wall -pedantic -ansi -s $(DEFINES) -std=c99 -g -D_GNU_SOURCE
@@ -38,20 +37,20 @@ pemithor: pemithor.o
 	echo Linking: $@
 	$(CC) $< -o $@ $(LFLAGS)
 	
-boromail: boromail.o $(SERVERUTILS) $(BSTROBJS)
+boromail: boromail.o utils.o boromailutils.o $(BSTROBJS)
 	echo Linking: $@
-	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o boromailutils.o $(BSTROBJS) -o $@ $(LFLAGS)
 
-faramail: faramail.o $(SERVERUTILS) $(BSTROBJS)
+faramail: faramail.o utils.o faramailutils.o $(BSTROBJS)
 	echo Linking: $@
-	$(CC) $< $(SERVERUTILS) $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o faramailutils.o $(BSTROBJS) -o $@ $(LFLAGS)
 
 %.o: $(ONERING)/%.c
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Start testing
-boromailutils: boromailutils.o  utils.o  $(BSTROBJS)
+boromailutils: boromailutils.o utils.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
 	sudo cp boromailutils $(TREE)/server/bin
@@ -64,10 +63,28 @@ verifysign: verifysign.o
 	$(CC) $< -o $@ $(LFLAGS)
 # End testing
 	
-client: signmsg encryptmsg decryptmsg
+client: signmsg encryptmsg decryptmsg send-msg recv-msg
 	sudo mv $^ $(TREE)/client/bin
 	sudo cp $(GOLLUM)/makecsr.sh $(GOLLUM)/genkey.sh $(TREE)/client/bin
 	sudo cp imopenssl.cnf $(TREE)/client
+
+# Not compiling yet
+get-cert: get-cert.o utils.o $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+
+change-pw: change-pw.o utils.o $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+#
+
+send-msg: send-msg.o utils.o $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+
+recv-msg: recv-msg.o utils.o $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
 
 signmsg: signmsg.o
 	echo Linking: $@
@@ -86,7 +103,7 @@ decryptmsg: decryptmsg.o
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg *.o
+	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg get-cert change-pw send-msg recv-msg *.o
 
 .PHONY : all
 .PHONY : install
