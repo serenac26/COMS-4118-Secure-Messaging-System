@@ -189,7 +189,7 @@ int verifysign(char *sender, char *msg_file, char *ver_out_file) {
 
 // msgout needs to be freed
 int recvmsg(char* msgfile, char** msgout) {
-    *msgout = malloc(MB);
+    *msgout = (char *)malloc(MB);
     if (!*msgout) {
         perror("Malloc error");
         return -1;
@@ -206,6 +206,7 @@ int recvmsg(char* msgfile, char** msgout) {
         free(*msgout);
         return -1;
     }
+    *msgout = '\0';
     while (0 < getline(&line, &size, fp)) {
         strncat(*msgout, line, size);
     }

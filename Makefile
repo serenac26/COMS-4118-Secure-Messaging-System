@@ -25,6 +25,14 @@ gen-certs:
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
+%.o: $(ONERING)/%.c
+	echo Compiling: $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+%.o: $(GOLLUM)/%.c
+	echo Compiling: $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
 %.o : %.c
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
@@ -45,10 +53,6 @@ faramail: faramail.o utils.o faramailutils.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o faramailutils.o $(BSTROBJS) -o $@ $(LFLAGS)
 
-%.o: $(ONERING)/%.c
-	echo Compiling: $<
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
-
 # Start testing
 boromailutils: boromailutils.o utils.o $(BSTROBJS)
 	echo Linking: $@
@@ -61,9 +65,21 @@ servercomponents: verifysign msgout
 verifysign: verifysign.o
 	echo Linking: $@
 	$(CC) $< -o $@ $(LFLAGS)
+
+encryptmsg: encryptmsg.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
+
+decryptmsg: decryptmsg.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
+
+signmsg: signmsg.o
+	echo Linking: $@
+	$(CC) $< -o $@ $(LFLAGS)
 # End testing
 	
-client: signmsg encryptmsg decryptmsg send-msg recv-msg
+client: send-msg recv-msg
 	sudo mv $^ $(TREE)/client/bin
 	sudo cp $(GOLLUM)/makecsr.sh $(GOLLUM)/genkey.sh $(TREE)/client/bin
 	sudo cp imopenssl.cnf $(TREE)/client
@@ -78,29 +94,13 @@ change-pw: change-pw.o utils.o $(BSTROBJS)
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
 #
 
-send-msg: send-msg.o utils.o $(BSTROBJS)
+send-msg: send-msg.o utils.o encryptmsg.o signmsg.o $(BSTROBJS)
 	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o encryptmsg.o signmsg.o $(BSTROBJS) -o $@ $(LFLAGS)
 
 recv-msg: recv-msg.o utils.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
-
-signmsg: signmsg.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
-
-encryptmsg: encryptmsg.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
-
-decryptmsg: decryptmsg.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
-
-%.o: $(GOLLUM)/%.c
-	echo Compiling: $<
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
 	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg get-cert change-pw send-msg recv-msg *.o

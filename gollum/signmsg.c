@@ -89,10 +89,10 @@ int signmsg(char *cert_file, char *pkey_file, char *msg_in, char *msg_out)
     return ret;
 }
 
-int main(int argc, char *argv[]) {
-    if (argc != 5) {
-        fprintf(stderr, "bad arg count; usage: signmsg <certfile> <keyfile> <msgin> <msgout>\n");
-        return 1;
-    }
-    return signmsg(argv[1], argv[2], argv[3], argv[4]);
-}
+// int main(int argc, char *argv[]) {
+//     if (argc != 5) {
+//         fprintf(stderr, "bad arg count; usage: signmsg <certfile> <keyfile> <msgin> <msgout>\n");
+//         return 1;
+//     }
+//     return signmsg(argv[1], argv[2], argv[3], argv[4]);
+// }

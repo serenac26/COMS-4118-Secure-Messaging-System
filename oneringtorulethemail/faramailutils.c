@@ -181,7 +181,7 @@ int getcert(char *cert, char *username) {
 //             return 1;
 //         }
 //         username = argv[2];
-//         cert = malloc(MAX_CERT_SIZE);
+//         cert = (char *)malloc(MAX_CERT_SIZE);
 //         if (!cert) {
 //             perror("malloc error");
 //             return 1;

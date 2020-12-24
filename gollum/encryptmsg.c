@@ -91,10 +91,10 @@ int encryptmsg(char *recipient_cert_file, char *plaintext_file, char *ciphertext
     return ret;
 }
 
-int main(int argc, char *argv[]) {
-    if (argc != 4) {
-        fprintf(stderr, "bad arg count; usage: encryptmsg <certfile> <plaintxtfile> <ciphertxtfile>\n");
-        return 1;
-    }
-    return encryptmsg(argv[1], argv[2], argv[3]);
-}
+// int main(int argc, char *argv[]) {
+//     if (argc != 4) {
+//         fprintf(stderr, "bad arg count; usage: encryptmsg <certfile> <plaintxtfile> <ciphertxtfile>\n");
+//         return 1;
+//     }
+//     return encryptmsg(argv[1], argv[2], argv[3]);
+// }
