@@ -73,6 +73,8 @@ send-msg: send-msg.o utils.o $(BSTROBJS)
 recv-msg: recv-msg.o utils.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+
 # End testing
 	
 client: signmsg encryptmsg decryptmsg
