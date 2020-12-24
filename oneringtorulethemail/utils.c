@@ -68,7 +68,7 @@ int appendList(struct Node **list, bstring str)
   return 1;
 }
 
-bstring printList(struct Node *list)
+bstring printList(struct Node *list, const char *delim)
 {
   struct Node *curr = list;
   bstring result = bfromcstr("");
@@ -79,7 +79,7 @@ bstring printList(struct Node *list)
     {
       if (!first)
       {
-        bcatcstr(result, ", ");
+        bcatcstr(result, delim);
       }
       else
       {
@@ -90,6 +90,27 @@ bstring printList(struct Node *list)
     curr = curr->next;
   }
   return result;
+}
+
+/*
+ * Returns
+ * ===
+ * 1      recip exists
+ * 0      recip does not exist or could not be accessed
+ * -1     error setting egid
+ */
+int recipExists(bstring recip)
+{
+  struct stat folderstat;
+  bstring path = bformat("%s/%s", MAIL_PATH, recip->data);
+  int statresult = stat((char *) path->data, &folderstat);
+  bdestroy(path);
+
+  if (statresult == 0)
+  {
+    return 1;
+  }
+  return 0;
 }
 
 /*
@@ -107,6 +128,7 @@ int getMessageFilename(bstring recip, bstring filename)
   bstring _filename = bformat("../mail/%s/%05d", recip->data, file_count);
 
   while (stat((char *) _filename->data, &filestat) == 0) {
+    bdestroy(_filename);
     file_count++;
     _filename = bformat("../mail/%s/%05d", recip->data, file_count);
   }

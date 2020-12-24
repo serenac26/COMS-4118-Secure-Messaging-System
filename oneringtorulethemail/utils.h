@@ -1,3 +1,6 @@
+#ifndef __UTILS_H__
+#define __UTILS_H__
+
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -10,7 +13,7 @@
 #include "bsafe.h"
 #include "bstrlibext.h"
 
-#define HASHEDPW_PATH "../private/credentials"
+#define HASHEDPW_PATH "../credentials"
 #define HASHEDPW_SUFFIX ".hashedpw"
 
 #define MAIL_PATH "../mail"
@@ -22,6 +25,8 @@
 
 #define ROOT_CERTIFICATE "../ca/certs/ca.cert.pem"
 #define INTERMED_CERTIFICATE "../ca/intermediate/certs/intermediate.cert.pem"
+
+#define IMCNF "imopenssl.cnf"
 
 #define FROM "From: "
 #define TO "To: "
@@ -51,6 +56,10 @@ int prependList(struct Node **list, bstring str);
 
 int appendList(struct Node **list, bstring str);
 
-bstring printList(struct Node *list);
+bstring printList(struct Node *list, const char *delim);
+
+int recipExists(bstring recip);
 
 int getMessageFilename(bstring recip, bstring filename);
+
+#endif
