@@ -14,8 +14,7 @@
 #include "utils.h"
 #include "boromailutils.h"
 
-struct Node *getrecipientcerts(struct Node *recipients)
-{
+struct Node *getrecipientcerts(struct Node *recipients) {
     struct Node *certs = createList();
     struct Node *curr = recipients;
     while (curr != NULL) {
@@ -55,27 +54,12 @@ struct Node *getrecipientcerts(struct Node *recipients)
     return certs;
 }
 
-int sendmsg(bstring sender, struct Node *recipient, struct Node *recipients, bstring msgin)
-{
-    char *msgout = malloc(MB);
-    bstring recipient_str;
-    bstring recipients_str;
-    int msglen;
+int sendmsg(bstring recipient, bstring msgin) {
     bstring filename;
     FILE *fp;
-    if (!msgout) {
-        perror("malloc error");
-        return -1;
-    }
-    recipient_str = recipient->str;
-    recipients_str = printList(recipients, ", ");
-    // TOOD: remove From and To headers (msgin should already include them in the encrypted and signed text)
-    msglen = sprintf(msgout, "%s%s\n%s%s\n%s", FROM, sender->data, TO, recipients_str->data, msgin->data);
     filename = bfromcstr("");
-    if (getMessageFilename(recipient_str, filename) == 0) {
+    if (getMessageFilename(recipient, filename) == 0) {
         bdestroy(filename);
-        bdestroy(recipients_str);
-        free(msgout);
         return -1;
     }
   
@@ -84,16 +68,12 @@ int sendmsg(bstring sender, struct Node *recipient, struct Node *recipients, bst
         fprintf(stderr, "%s\n", filename->data);
         perror("File open error");
         bdestroy(filename);
-        bdestroy(recipients_str);
-        free(msgout);
         return -1;
     }
-    fwrite(msgout, 1, msglen, fp);
+    fwrite((char *)msgin->data, 1, msgin->slen, fp);
     fclose(fp);
     
     bdestroy(filename);
-    bdestroy(recipients_str);
-    free(msgout);
     return 0;
 }
 
@@ -107,8 +87,7 @@ int sendmsg(bstring sender, struct Node *recipient, struct Node *recipients, bst
  */
 
 /* Based off simple S/MIME verification example */
-int verifysign(char *sender, char *msg_file, char *ver_out_file)
-{
+int verifysign(char *sender, char *msg_file, char *ver_out_file) {
     BIO *in = NULL, *out = NULL, *rootbio = NULL, *intmbio = NULL, *senderbio = NULL, *cont = NULL;
     X509_STORE *st = NULL;
     X509 *rootcert = NULL;
@@ -225,7 +204,36 @@ int verifysign(char *sender, char *msg_file, char *ver_out_file)
     return ret;
 }
 
-// TODO: add msgout
+// msgout needs to be freed
+int recvmsg(char* ver_out_file, char** msgout) {
+    *msgout = malloc(MB);
+    if (!*msgout) {
+        perror("Malloc error");
+        return -1;
+    }
+    char *line = NULL;
+    size_t size = 0;
+    FILE *fp;
+    
+    // Get message body from verified file
+    fp = fopen(ver_out_file, "r");
+    if (!fp) {
+        fprintf(stderr, "%s\n", ver_out_file);
+        perror("File open error");
+        free(*msgout);
+        return -1;
+    }
+    while (0 < getline(&line, &size, fp)) {
+        strncat(*msgout, line, size);
+    }
+    fclose(fp);
+
+    // Remove temp ver files
+    remove(ver_out_file);
+    
+    free(line);
+    return 0;
+}
 
 // Testing
 int main(int argc, char *argv[]) {
@@ -260,40 +268,22 @@ int main(int argc, char *argv[]) {
     }
 
     if (strcmp(op, "sendmsg") == 0) {
-        char *msg;
-        char *sender;
-        char **recipients;
-        struct Node *recipients_list;
-        struct Node *recipient;
+        char *msg, *recipient;
         int i = 0;
-        if (argc < 5) {
-            fprintf(stderr, "bad arg count; usage: boromailutils sendmsg <msg> <sender> <recipients..>\n");
+        if (argc < 4) {
+            fprintf(stderr, "bad arg count; usage: boromailutils sendmsg <msg> <recipient>\n");
             return 1;
         }
         msg = argv[2];
-        sender = argv[3];
-        recipients = argv + 4;
-        recipients_list = createList();
-        bstring bsender = bfromcstr(sender);
+        recipient = argv[3];
         bstring bmsg = bfromcstr(msg);
-        while (recipients[i] != NULL) {
-            appendList(&recipients_list, bfromcstr(recipients[i++]));
+        bstring brecipient = bfromcstr(recipient);
+        printf("send to: %s\n", brecipient->data);
+        if (sendmsg(brecipient, bmsg) == -1) {
+            fprintf(stderr, "Error sending message to %s\n", brecipient->data);
         }
-        recipient = recipients_list;
-        while (recipient != NULL)
-        {
-            if (recipient->str != NULL) {
-                bstring brecipient = recipient->str;
-                printf("send to: %s\n", brecipient->data);
-                if (sendmsg(bsender, recipient, recipients_list, bmsg) == -1) {
-                    fprintf(stderr, "Error sending message to %s\n", brecipient->data);
-                }
-            }
-            recipient = recipient->next;
-        }
-        bdestroy(bsender);
+        bdestroy(brecipient);
         bdestroy(bmsg);
-        freeList(recipients_list);
         return 0;
     }
 
@@ -312,5 +302,20 @@ int main(int argc, char *argv[]) {
         msg_file = argv[3];
         ver_out_file = argv[4];
         return verifysign(sender, msg_file, ver_out_file);
+    }
+
+    if (strcmp(op, "recvmsg") == 0) {
+        char *ver_out_file;
+        char *msgout;
+
+        if (argc != 3) {
+            fprintf(stderr, "bad arg count; usage: boromailutils recvmsg <veroutfile>\n");
+            return 1;
+        }
+        ver_out_file = argv[2];
+        int value = recvmsg(ver_out_file, &msgout);
+        printf("msgout:\n%s", msgout);
+        free(msgout);
+        return value;
     }
 }
