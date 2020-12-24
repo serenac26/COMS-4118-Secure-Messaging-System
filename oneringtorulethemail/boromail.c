@@ -176,6 +176,13 @@ int create_socket(int port) {
   return s;
 }
 
+int verify_callback(int ok, X509_STORE_CTX *ctx) {
+  /* Tolerate certificate expiration */
+  p("verify callback error: %d\n", X509_STORE_CTX_get_error(ctx));
+  /* Otherwise don't override */
+  return ok;
+}
+
 void testParsers(int mama, char **moo) {
   struct VerbLine vl;
   char *yeet = "post https://www.rbbridge.com:8080/sendmsg/goodgod HTTP/1.1";
@@ -229,7 +236,14 @@ int main(int mama, char **moo) {
     exit(EXIT_FAILURE);
   }
 
-  SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+  SSL_CTX_set_client_CA_list(
+      ctx,
+      SSL_load_client_CA_file("../ca/intermediate/certs/ca-chain.cert.pem"));
+
+  SSL_CTX_set_verify(ctx,
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT |
+                         SSL_VERIFY_CLIENT_ONCE,
+                     verify_callback);
   /* Set the verification depth to 1 */
   SSL_CTX_set_verify_depth(ctx, 1);
 
@@ -253,11 +267,6 @@ int main(int mama, char **moo) {
 
     if (SSL_accept(ssl) <= 0) {
       ERR_print_errors_fp(stderr);
-    }
-
-    p("%d\n", SSL_get_verify_result(ssl));
-
-    if (SSL_get_verify_result(ssl) != X509_V_OK) {
       SSL_shutdown(ssl);
       SSL_free(ssl);
       close(client);
@@ -308,8 +317,11 @@ int main(int mama, char **moo) {
     while (1) {
       memset(rbuf, '\0', sizeof(rbuf));
       int readReturn = SSL_read(ssl, rbuf, sizeof(rbuf) - 1);
-      p("state: %d line: %s\n", state, rbuf);
-      if (readReturn == sizeof(rbuf) - 1 && state != 2) {
+      p("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
+      if (readReturn <= 0) {
+        p("error: %d %d\n", SSL_get_error(ssl, readReturn), errno);
+        break;
+      } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
         SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
         break;
       } else if (state == 0) {
