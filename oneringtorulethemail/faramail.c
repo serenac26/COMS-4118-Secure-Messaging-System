@@ -37,7 +37,7 @@
 #define ERR_PENDING_MSG (-4)
 #define ERR_CERT_EXISTS (-5)
 
-#define pb(...)           \
+#define pf(...)           \
   if (DEBUG) {            \
     printf("\033[0;34m"); \
     printf("Faramail: "); \
@@ -73,7 +73,7 @@ int parseVerbLine(char *data, struct VerbLine *vl) {
                   "([^[:space:]]+)\n",
                   REG_EXTENDED | REG_ICASE);
   if (value != 0) {
-    pb("Regex did not compile successfully\n");
+    pf("Regex did not compile successfully\n");
   }
   regmatch_t match[6];
   int test = regexec(&reg, data, 6, match, 0);
@@ -136,7 +136,7 @@ int parseOptionLine(char *data, struct OptionLine *ol) {
                   "[[:space:]]*(.*)[[:space:]]*:[[:space:]]*(.*)[[:space:]]*\n",
                   REG_EXTENDED | REG_ICASE);
   if (value != 0) {
-    pb("Regex did not compile successfully\n");
+    pf("Regex did not compile successfully\n");
   }
   regmatch_t match[3];
   int test = regexec(&reg, data, 3, match, 0);
@@ -196,16 +196,16 @@ void testParsers(int mama, char **moo) {
   struct VerbLine vl;
   char *yeet = "post https://www.rbbridge.com:8080/sendmsg/goodgod HTTP/1.1";
   int result = parseVerbLine(yeet, &vl);
-  pb("%d %s\n", result, vl.verb);
-  pb("%d %s\n", result, vl.port);
-  pb("%d %s\n", result, vl.path);
-  pb("%d %s\n", result, vl.version);
+  pf("%d %s\n", result, vl.verb);
+  pf("%d %s\n", result, vl.port);
+  pf("%d %s\n", result, vl.path);
+  pf("%d %s\n", result, vl.version);
 
   struct OptionLine ol;
   char *yeet2 = "connection: keep-alive";
   int result2 = parseOptionLine(yeet2, &ol);
-  pb("%d %s\n", result2, ol.header);
-  pb("%d %s\n", result2, ol.value);
+  pf("%d %s\n", result2, ol.header);
+  pf("%d %s\n", result2, ol.value);
 }
 
 // caller should allocate MAX_CERT_SIZE bytes to cert
@@ -351,7 +351,7 @@ int main(int mama, char **moo) {
       exit(EXIT_FAILURE);
     }
 
-    pb("Connection from %x, port %x\n", addr.sin_addr.s_addr, addr.sin_port);
+    pf("Connection from %x, port %x\n", addr.sin_addr.s_addr, addr.sin_port);
 
     SSL_set_fd(ssl, client);
 
@@ -412,9 +412,9 @@ int main(int mama, char **moo) {
     while (1) {
       memset(rbuf, '\0', sizeof(rbuf));
       int readReturn = SSL_read(ssl, rbuf, sizeof(rbuf) - 1);
-      pb("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
+      pf("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
       if (readReturn == 0) {
-        pb("0 bytes read\n");
+        pf("0 bytes read\n");
         break;
       } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
         SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
@@ -487,7 +487,7 @@ int main(int mama, char **moo) {
         data = (char *)malloc(contentLength + 1);
         memset(data, '\0', contentLength);
 
-        // pb("%ld %ld %s\n", strlen(rbuf), sizeof(rbuf), rbuf);
+        // pf("%ld %ld %s\n", strlen(rbuf), sizeof(rbuf), rbuf);
         memcpy(data, rbuf, strlen(rbuf));
         int contentReceived = strlen(rbuf);
 
@@ -554,7 +554,7 @@ int main(int mama, char **moo) {
          yeet
 
          */
-        pb("state: %d\naction: %d\ncontentLength: %d\nconnection: %d\n%s\n",
+        pf("state: %d\naction: %d\ncontentLength: %d\nconnection: %d\n%s\n",
            state, action, contentLength, connection, data);
 
         bstring bdata = bfromcstr(data);
@@ -566,6 +566,7 @@ int main(int mama, char **moo) {
             SSL_write(ssl, ERR_MALFORMED_REQUEST,
                       strlen(ERR_MALFORMED_REQUEST));
             bstrListDestroy(lines);
+            connection = 2;
             goto cleanup;
           }
           bstring usernamekey = NULL, usernamevalue = NULL, passwordkey = NULL,
@@ -576,7 +577,8 @@ int main(int mama, char **moo) {
                   0 ||
               deserializeData(csrkey, csrvalue, lines->entry[2], 1) != 0 ||
               bstrccmp(usernamekey, "username") != 0 ||
-              bstrccmp(passwordkey, "password") || bstrccmp(csrkey, "csr")) {
+              bstrccmp(passwordkey, "password") != 0 ||
+              bstrccmp(csrkey, "csr") != 0) {
             SSL_write(ssl, ERR_MALFORMED_REQUEST,
                       strlen(ERR_MALFORMED_REQUEST));
             bdestroy(usernamekey);
@@ -586,6 +588,7 @@ int main(int mama, char **moo) {
             bdestroy(csrkey);
             bdestroy(csrvalue);
             bstrListDestroy(lines);
+            connection = 2;
             goto cleanup;
           }
           char cert[MAX_CERT_SIZE];
@@ -604,6 +607,7 @@ int main(int mama, char **moo) {
             bdestroy(csrkey);
             bdestroy(csrvalue);
             bstrListDestroy(lines);
+            connection = 2;
             goto cleanup;
           }
 
@@ -615,6 +619,7 @@ int main(int mama, char **moo) {
             bdestroy(certValue);
             bdestroy(certData);
             sendBad(ssl, ERR_MALFORMED_REQUEST);
+            connection = 2;
             goto cleanup;
           };
           bdestroy(certKey);
@@ -623,10 +628,11 @@ int main(int mama, char **moo) {
           bdestroy(certData);
         } else if (action == 2 && bstrccmp(path, "/changepw") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
-          if (lines->qty != 4) {
+          if (lines->qty != 5) {
             SSL_write(ssl, ERR_MALFORMED_REQUEST,
                       strlen(ERR_MALFORMED_REQUEST));
             bstrListDestroy(lines);
+            connection = 2;
             goto cleanup;
           }
           bstring usernamekey = NULL, usernamevalue = NULL, passwordkey = NULL,
@@ -640,9 +646,9 @@ int main(int mama, char **moo) {
                               0) != 0 ||
               deserializeData(csrkey, csrvalue, lines->entry[3], 1) != 0 ||
               bstrccmp(usernamekey, "username") != 0 ||
-              bstrccmp(passwordkey, "password") ||
-              bstrccmp(newpasswordkey, "newpassword") ||
-              bstrccmp(csrkey, "csr")) {
+              bstrccmp(passwordkey, "password") != 0 ||
+              bstrccmp(newpasswordkey, "newpassword") != 0 ||
+              bstrccmp(csrkey, "csr") != 0) {
             SSL_write(ssl, ERR_MALFORMED_REQUEST,
                       strlen(ERR_MALFORMED_REQUEST));
             bdestroy(usernamekey);
@@ -654,6 +660,7 @@ int main(int mama, char **moo) {
             bdestroy(csrkey);
             bdestroy(csrvalue);
             bstrListDestroy(lines);
+            connection = 2;
             goto cleanup;
           }
           char cert[MAX_CERT_SIZE];
@@ -674,6 +681,7 @@ int main(int mama, char **moo) {
             bdestroy(csrkey);
             bdestroy(csrvalue);
             bstrListDestroy(lines);
+            connection = 2;
             goto cleanup;
           }
 
@@ -685,6 +693,7 @@ int main(int mama, char **moo) {
             bdestroy(certValue);
             bdestroy(certData);
             sendBad(ssl, ERR_MALFORMED_REQUEST);
+            connection = 2;
             goto cleanup;
           };
           bdestroy(certKey);
@@ -693,6 +702,7 @@ int main(int mama, char **moo) {
           bdestroy(certData);
         } else {
           sendBad(ssl, ERR_MALFORMED_REQUEST);
+          connection = 2;
         }
 
       cleanup:
