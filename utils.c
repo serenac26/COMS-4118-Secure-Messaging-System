@@ -138,7 +138,7 @@ int getMessageFilename(bstring recip, bstring filename)
 
   if (_i == BSTR_ERR)
   {
-    return 1;
+    return -1;
   }
   return 1;
 }

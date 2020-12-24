@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include "bstrlib.h"
 #include "utf8util.h"
 #include "buniutil.h"
@@ -20,6 +21,8 @@
 
 #define CERT_PATH "../ca/intermediate/certs"
 #define CERT_SUFFIX ".cert.pem"
+#define CSR_PATH "../ca/intermediate/csr"
+#define CSR_SUFFIX ".req.pem"
 
 #define MAX_CERT_SIZE 2048
 

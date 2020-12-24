@@ -8,7 +8,12 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
+#include "bstrlib.h"
+#include "utf8util.h"
+#include "buniutil.h"
+#include "bstraux.h"
+#include "bsafe.h"
+#include "bstrlibext.h"
 #include "faramailutils.h"
 
 #define DEBUG 1
@@ -194,10 +199,15 @@ void testParsers(int mama, char **moo) {
   p("%d %s\n", result2, ol.value);
 }
 
+// caller should allocate MAX_CERT_SIZE bytes to cert
 // cert will be filled with the new certificate contents
 // cert will be written to ca/intermediate/certs/username.cert.pem
 // on success returns the length of the cert
-int handleGetCert(char *cert, char *username, char *pw) {
+int handleGetCert(char *cert, bstring busername, bstring bpw, bstring bcsr) {
+  char *username = (char *)busername->data;
+  char *pw = (char *)bpw->data;
+  char *csr = (char *)bcsr->data;
+  
   int lret = login(username, pw);
   if (lret == 1) {
     fprintf(stderr, "Login failed: bad username\n");
@@ -207,14 +217,24 @@ int handleGetCert(char *cert, char *username, char *pw) {
     return -1;
   }
   printf("Login successful\n");
-  return getcert(cert, username);
+  if (addcsr(csr, username) == -1) {
+    fprintf(stderr, "Could not generate certificate\n");
+    return -1;
+  }
+  return getcert(cert, username, 0);
 }
 
+// caller should allocate MAX_CERT_SIZE bytes to cert
 // change password only if mailbox is empty
 // cert will be filled with the new certificate contents
 // cert will be written to ca/intermediate/certs/username.cert.pem
 // on success returns the length of the cert
-int handleChangePw(char *cert, char *username, char *oldpw, char *newpw) {
+int handleChangePw(char *cert, bstring busername, bstring boldpw, bstring bnewpw, bstring bcsr) {
+  char *username = (char *)busername->data;
+  char *oldpw = (char *)boldpw->data;
+  char *newpw = (char *)bnewpw->data;
+  char *csr = (char *)bcsr->data;
+  
   int lret = login(username, oldpw);
   if (lret == 1) {
     fprintf(stderr, "Login failed: bad username\n");
@@ -235,7 +255,11 @@ int handleChangePw(char *cert, char *username, char *oldpw, char *newpw) {
     fprintf(stderr, "Error changing password\n");
     return -1;
   }
-  return getcert(cert, username);
+  if (addcsr(csr, username) == -1) {
+    fprintf(stderr, "Could not generate certificate\n");
+    return -1;
+  }
+  return getcert(cert, username, 1);
 }
 
 // Refer to:
@@ -290,6 +314,10 @@ int main(int mama, char **moo) {
 
     if (SSL_accept(ssl) <= 0) {
       ERR_print_errors_fp(stderr);
+      SSL_shutdown(ssl);
+      SSL_free(ssl);
+      close(client);
+      continue;
     }
 
     char rbuf[READBUF_SIZE];
@@ -336,8 +364,11 @@ int main(int mama, char **moo) {
     while (1) {
       memset(rbuf, '\0', sizeof(rbuf));
       int readReturn = SSL_read(ssl, rbuf, sizeof(rbuf) - 1);
-      p("state: %d line: %s\n", state, rbuf);
-      if (readReturn == sizeof(rbuf) - 1 && state != 2) {
+      p("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
+      if (readReturn == 0) {
+        p("0 bytes read\n");
+        break;
+      } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
         SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
         break;
       } else if (state == 0) {
