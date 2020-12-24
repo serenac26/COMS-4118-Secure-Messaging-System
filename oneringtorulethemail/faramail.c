@@ -314,6 +314,10 @@ int main(int mama, char **moo) {
 
     if (SSL_accept(ssl) <= 0) {
       ERR_print_errors_fp(stderr);
+      SSL_shutdown(ssl);
+      SSL_free(ssl);
+      close(client);
+      continue;
     }
 
     char rbuf[READBUF_SIZE];
@@ -360,8 +364,11 @@ int main(int mama, char **moo) {
     while (1) {
       memset(rbuf, '\0', sizeof(rbuf));
       int readReturn = SSL_read(ssl, rbuf, sizeof(rbuf) - 1);
-      p("state: %d line: %s\n", state, rbuf);
-      if (readReturn == sizeof(rbuf) - 1 && state != 2) {
+      p("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
+      if (readReturn == 0) {
+        p("0 bytes read\n");
+        break;
+      } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
         SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
         break;
       } else if (state == 0) {
