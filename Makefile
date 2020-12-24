@@ -23,7 +23,11 @@ install-priv:
 gen-certs:
 	sudo ./gen-certs.sh $(TREE)
 
-%.o : $(BSTRDIR)/%.c $(B64DIR)/%.c
+%.o : $(B64DIR)/%.c
+	echo Compiling: $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+%.o : $(BSTRDIR)/%.c
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
@@ -105,12 +109,16 @@ decryptmsg: decryptmsg.o
 	echo Linking: $@
 	$(CC) $< -o $@ $(LFLAGS)
 
+testutils: testutils.o utils.o $(BSTROBJS) $(B64OBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
+
 %.o: $(GOLLUM)/%.c
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f pemithor boromail boromailutils faramail faramailutils verifysign msgout signmsg encryptmsg decryptmsg get-cert change-pw send-msg recv-msg *.o
+	rm -f pemithor boromail boromailutils faramail faramailutils verifysign msgout signmsg encryptmsg decryptmsg get-cert change-pw send-msg recv-msg testutils *.o
 
 .PHONY : all
 .PHONY : install

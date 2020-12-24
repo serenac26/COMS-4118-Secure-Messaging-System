@@ -13,6 +13,7 @@
 #include "bstraux.h"
 #include "bsafe.h"
 #include "bstrlibext.h"
+#include "base64.h"
 
 #define HASHEDPW_PATH "../credentials"
 #define HASHEDPW_SUFFIX ".hashedpw"
@@ -64,5 +65,9 @@ bstring printList(struct Node *list, const char *delim);
 int recipExists(bstring recip);
 
 int getMessageFilename(bstring recip, bstring filename);
+
+void encodeMessage(bstring message);
+
+void decodeMessage(bstring message);
 
 #endif
