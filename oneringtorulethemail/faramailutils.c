@@ -205,6 +205,7 @@ int getcert(char *cert, char *username, int *n, int revoke) {
 //     if (strcmp(op, "getcert") == 0) {
 //         char *cert;
 //         char *username;
+//         int n;
 //         if (argc != 3) {
 //             fprintf(stderr, "bad arg count; usage: faramailutils getcert <username>\n");
 //             return 1;
@@ -215,7 +216,7 @@ int getcert(char *cert, char *username, int *n, int revoke) {
 //             perror("malloc error");
 //             return 1;
 //         }
-//         return getcert(cert, username, 0);
+//         return getcert(cert, username, &n, 0);
 //     }
 
 //     fprintf(stderr, "operation %s not supported\n", op);
