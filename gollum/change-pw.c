@@ -12,11 +12,16 @@
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
-
+//./change-pw <username> <privatekeyfile> 
 int main(int argc, char *argv) {
-    char *username = getpass("Enter username: ");
+
+    if (argc != 2) {
+        fprintf(stderr, "bad arg count; usage: change-pw <username> <key-file>\n");
+		return 1;
+    }
+    char *username = argv[1];
     char *password = getpass("Enter old password: ");
-    char *newkeyfile = getpass("Enter new privatekey file: ");
+    char *newkeyfile = argv[2];
     char *newpassword = getpass("Enter new password: ");
 //make csr with new private key and password 
 //username /password/newpassword/csr 
@@ -42,7 +47,7 @@ int main(int argc, char *argv) {
     pid = fork();
     //CHANGE int config and directory 
     if (pid == 0) {
-        execl("../golum/makecsr.sh", "../golum/makecsr.sh", intconfi, username, privatekey, tempfile);
+        execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username, privatekey, tempfile);
     }
     while ((wpid = wait(&status)) > 0);
     FILE *temp; 
@@ -64,7 +69,6 @@ int main(int argc, char *argv) {
 
 	int ilen;
 	char ibuf[512];
-	char *obuf = "GET / HTTP/1.0\n\n";
 
 	struct sockaddr_in sin;
 	int sock;
@@ -88,9 +92,9 @@ int main(int argc, char *argv) {
 
 	bzero(&sin, sizeof sin);
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(443);
+	sin.sin_port = htons(4200);
 
-	he = gethostbyname("www.cs.columbia.edu");
+	he = gethostbyname("localhost");//update hostbyname
 	memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
 	if (connect(sock, (struct sockaddr *)&sin, sizeof sin) < 0) {
 		perror("connect");
@@ -122,6 +126,46 @@ sbio=BIO_new(BIO_s_socket());
 
     //ssl write stuff, new pass 
     //ssl read confirm new 
+    int bytes = (1024*1024);
+    int port = 4200;
+    char *method = "getcert";
+
+    void *buffer = malloc(sizeof(char)*bytes);
+    *buffer = '\0';
+
+    char *header;
+    sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", port, method);
+    char *header2 = "connection: close\n";
+    char *header3;
+    sprintf(header3, "content-length: %d\n", contentLength);
+
+    char *usernameLine;
+    sprintf(usernameLine, "username: %s\n", username);
+
+    char *passwordLine;
+    sprintf(passwordLine, "password: %s\n", password);
+
+    char *csrLine;
+    sprintf(csrLine, "csr: %s\n", csr);
+
+   //+1 for new line
+    int contentLength = strlen(username) + strlen(password) + strlen(csr) + 1;
+    sprintf(header3, "content-length: %d\n", contentLength);
+    strncat(buffer, header, strlen(header));
+    strncat(buffer, header2, strlen(header2));
+    strncat(buffer, header3, strlen(header3));
+    strncat(buffer, "\n", strlen("\n"));
+
+
+    strncat(buffer, usernameLine, strlen(usernameLine));
+    strncat(buffer, passwordLine, strlen(passwordLine));
+    strncat(buffer, csrLine, strlen(passwordLine));
+    strncat(buffer, "\n", strlen("\n"));
+    
+    SSL_write(ssl, buffer, strlen(buffer));
+    //should do read 
+    //check read and return good or bad to user 
     free(privatekey);
+    free(csr);
     return 0;
 }

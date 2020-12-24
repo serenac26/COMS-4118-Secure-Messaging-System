@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
 
     char *privatekeyfile = getpass("Enter privatekey file: ");
     FILE *fp;
-    fp = fopen(privatekey, "r+");
+    fp = fopen(privatekeyfile, "r+");
     fseek(fp, 0, SEEK_END);
     long fsize = ftell(fp);
     fseek(fp, 0, SEEK_SET);
@@ -38,9 +38,6 @@ int main(int argc, char *argv[]) {
     BIO *sbio;
     int err; char *s;
 
-    int ilen;
-    char ibuf[512];
-    
     struct sockaddr_in sin;
     int sock;
     struct hostent *he;
