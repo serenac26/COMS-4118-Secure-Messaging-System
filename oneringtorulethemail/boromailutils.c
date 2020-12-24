@@ -14,46 +14,27 @@
 #include "utils.h"
 #include "boromailutils.h"
 
-// TODO: one recipient at a time
-struct Node *getrecipientcerts(struct Node *recipients)
+// cert MUST be at least MAX_CERT_SIZE
+int getrecipientcert(char *cert, bstring recipient)
 {
-    struct Node *certs = createList();
-    struct Node *curr = recipients;
-    while (curr != NULL) {
-        if (curr->str == NULL) {
-            curr = curr->next;
-            continue;
-        }
-        bstring recipient = curr->str;
-        char cert_path[100];
-        char cert[MAX_CERT_SIZE];
-        memset(cert, '\0', sizeof(cert));
-        // check that the recipient is valid, i.e. has a mailbox
-        if (recipExists(recipient) != 1) {
-            fprintf(stderr, "Invalid recipient\n");
-            curr = curr->next;
-            continue;
-        }
-        sprintf(cert_path, "%s/%s%s", CERT_PATH, recipient->data, CERT_SUFFIX);
-        BIO *certbio = NULL;
-        certbio = BIO_new_file(cert_path, "r");
-        if (!certbio) {
-            fprintf(stderr, "%s\n", cert_path);
-            fprintf(stderr, "File open error");
-            curr = curr->next;
-            continue;
-        }
-        BIO_read(certbio, cert, MAX_CERT_SIZE);
-        // clone recipient bstring
-        bstring brecipient = bstrcpy(recipient);
-        appendList(&certs, brecipient);
-        bstring bcert = bfromcstr(cert);
-        appendList(&certs, bcert);
-        BIO_free(certbio);
-        curr = curr->next;
+    char cert_path[100];
+    memset(cert, '\0', MAX_CERT_SIZE);
+    // check that the recipient is valid, i.e. has a mailbox
+    if (recipExists(recipient) != 1) {
+        fprintf(stderr, "Invalid recipient\n");
+        return 1;
     }
-    curr = certs;
-    return certs;
+    sprintf(cert_path, "%s/%s%s", CERT_PATH, recipient->data, CERT_SUFFIX);
+    BIO *certbio = NULL;
+    certbio = BIO_new_file(cert_path, "r");
+    if (!certbio) {
+        fprintf(stderr, "%s\n", cert_path);
+        fprintf(stderr, "File open error");
+        return 2;
+    }
+    BIO_read(certbio, cert, MAX_CERT_SIZE);
+    BIO_free(certbio);
+    return 0;
 }
 
 int sendmsg(bstring recipient, bstring msgin) {
@@ -241,32 +222,27 @@ int recvmsg(char* ver_out_file, char** msgout) {
 // int main(int argc, char *argv[]) {
 //     char *op;
 //     if (argc < 2) {
-//         fprintf(stderr, "bad arg count; usage: boromailutils <operation>\nsupported operations: getrecipientcerts sendmsg");
+//         fprintf(stderr, "bad arg count; usage: boromailutils <operation>\nsupported operations: getrecipientcert sendmsg");
 //         return 1;
 //     }
 //     op = argv[1];
 
-//     if (strcmp(op, "getrecipientcerts") == 0) {
-//         struct Node *certs;
-//         char **recipients;
-//         struct Node *recipients_list;
+//     if (strcmp(op, "getrecipientcert") == 0) {
+//         char cert[MAX_CERT_SIZE];
+//         char *recipient;
 //         int i = 0;
 //         if (argc < 3) {
-//             fprintf(stderr, "bad arg count; usage: boromailutils getrecipientcerts <recipients..>\n");
+//             fprintf(stderr, "bad arg count; usage: boromailutils getrecipientcert <recipient>\n");
 //             return 1;
 //         }
-//         recipients = argv + 2;
-//         recipients_list = createList();
-//         while (recipients[i] != NULL) {
-//             appendList(&recipients_list, bfromcstr(recipients[i++]));
+//         recipient = argv[2];
+//         bstring brec = bfromcstr(recipient);
+//         int ret = getrecipientcert(cert, brec);
+//         if (ret == 0) {
+//             printf("%s\n", cert);
 //         }
-//         certs = getrecipientcerts(recipients_list);
-//         bstring bcerts = printList(certs, "\n");
-//         printf("%s\n", bcerts->data);
-//         bdestroy(bcerts);
-//         freeList(recipients_list);
-//         freeList(certs);
-//         return 0;
+//         bdestroy(brec);
+//         return ret;
 //     }
 
 //     if (strcmp(op, "sendmsg") == 0) {

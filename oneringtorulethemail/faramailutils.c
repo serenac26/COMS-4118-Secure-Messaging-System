@@ -87,6 +87,7 @@ int changepw(char *username, char *pw)
     return 0;
 }
 
+// cert MUST be at least MAX_CERT_SIZE
 // on success returns length of certificate
 int getcert(char *cert, char *username) {
     // path relative to server directory
@@ -94,6 +95,7 @@ int getcert(char *cert, char *username) {
     // path relative to current directory
     char clientcert[53];
     char relclientreq[50];
+    memset(cert, '\0', MAX_CERT_SIZE);
     // DO NOT use CERT_PATH macro here
     sprintf(relclientcert, "ca/intermediate/certs/%s.cert.pem", username);
     sprintf(clientcert, "../%s", relclientcert);
@@ -184,7 +186,6 @@ int getcert(char *cert, char *username) {
 //             perror("malloc error");
 //             return 1;
 //         }
-//         memset(cert, '\0', MAX_CERT_SIZE);
 //         return getcert(cert, username);
 //     }
 
