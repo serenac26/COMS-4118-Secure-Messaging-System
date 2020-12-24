@@ -59,3 +59,11 @@ bstring bgets_limit(bNgetc getcPtr, void *parm, char terminator, int limit)
   }
   return buff;
 }
+
+// bstrcmp but the second param is a c string
+int bstrccmp(const_bstring b0, char *cstr) {
+  bstring b1 = bfromcstr(cstr);
+  int result = bstrcmp(b0, b1);
+  bdestroy(b1);
+  return result;
+}
