@@ -55,11 +55,6 @@ boromailutils: boromailutils.o utils.o $(BSTROBJS)
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
 	sudo cp boromailutils $(TREE)/server/bin
 
-faramailutils: faramailutils.o utils.o $(BSTROBJS)
-	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
-	sudo cp faramailutils $(TREE)/server/bin
-
 servercomponents: verifysign msgout
 	sudo mv $^ $(TREE)/server/bin
 	
@@ -108,7 +103,7 @@ decryptmsg: decryptmsg.o
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f pemithor boromail boromailutils faramail faramailutils verifysign msgout signmsg encryptmsg decryptmsg get-cert change-pw send-msg recv-msg *.o
+	rm -f pemithor boromail boromailutils faramail verifysign msgout signmsg encryptmsg decryptmsg get-cert change-pw send-msg recv-msg *.o
 
 .PHONY : all
 .PHONY : install

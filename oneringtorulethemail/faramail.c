@@ -207,7 +207,7 @@ int handleGetCert(char *cert, char *username, char *pw) {
     return -1;
   }
   printf("Login successful\n");
-  return getcert(cert, username, 0);
+  return getcert(cert, username);
 }
 
 // change password only if mailbox is empty
@@ -235,7 +235,7 @@ int handleChangePw(char *cert, char *username, char *oldpw, char *newpw) {
     fprintf(stderr, "Error changing password\n");
     return -1;
   }
-  return getcert(cert, username, 1);
+  return getcert(cert, username);
 }
 
 // Refer to:
