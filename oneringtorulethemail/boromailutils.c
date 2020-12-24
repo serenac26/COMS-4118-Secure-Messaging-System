@@ -228,89 +228,89 @@ int verifysign(char *sender, char *msg_file, char *ver_out_file)
 // TODO: add msgout
 
 // Testing
-int main(int argc, char *argv[]) {
-    char *op;
-    if (argc < 2) {
-        fprintf(stderr, "bad arg count; usage: boromailutils <operation>\nsupported operations: getrecipientcerts sendmsg");
-        return 1;
-    }
-    op = argv[1];
+// int main(int argc, char *argv[]) {
+//     char *op;
+//     if (argc < 2) {
+//         fprintf(stderr, "bad arg count; usage: boromailutils <operation>\nsupported operations: getrecipientcerts sendmsg");
+//         return 1;
+//     }
+//     op = argv[1];
 
-    if (strcmp(op, "getrecipientcerts") == 0) {
-        struct Node *certs;
-        char **recipients;
-        struct Node *recipients_list;
-        int i = 0;
-        if (argc < 3) {
-            fprintf(stderr, "bad arg count; usage: boromailutils getrecipientcerts <recipients..>\n");
-            return 1;
-        }
-        recipients = argv + 2;
-        recipients_list = createList();
-        while (recipients[i] != NULL) {
-            appendList(&recipients_list, bfromcstr(recipients[i++]));
-        }
-        certs = getrecipientcerts(recipients_list);
-        bstring bcerts = printList(certs, "\n");
-        printf("%s\n", bcerts->data);
-        bdestroy(bcerts);
-        freeList(recipients_list);
-        freeList(certs);
-        return 0;
-    }
+//     if (strcmp(op, "getrecipientcerts") == 0) {
+//         struct Node *certs;
+//         char **recipients;
+//         struct Node *recipients_list;
+//         int i = 0;
+//         if (argc < 3) {
+//             fprintf(stderr, "bad arg count; usage: boromailutils getrecipientcerts <recipients..>\n");
+//             return 1;
+//         }
+//         recipients = argv + 2;
+//         recipients_list = createList();
+//         while (recipients[i] != NULL) {
+//             appendList(&recipients_list, bfromcstr(recipients[i++]));
+//         }
+//         certs = getrecipientcerts(recipients_list);
+//         bstring bcerts = printList(certs, "\n");
+//         printf("%s\n", bcerts->data);
+//         bdestroy(bcerts);
+//         freeList(recipients_list);
+//         freeList(certs);
+//         return 0;
+//     }
 
-    if (strcmp(op, "sendmsg") == 0) {
-        char *msg;
-        char *sender;
-        char **recipients;
-        struct Node *recipients_list;
-        struct Node *recipient;
-        int i = 0;
-        if (argc < 5) {
-            fprintf(stderr, "bad arg count; usage: boromailutils sendmsg <msg> <sender> <recipients..>\n");
-            return 1;
-        }
-        msg = argv[2];
-        sender = argv[3];
-        recipients = argv + 4;
-        recipients_list = createList();
-        bstring bsender = bfromcstr(sender);
-        bstring bmsg = bfromcstr(msg);
-        while (recipients[i] != NULL) {
-            appendList(&recipients_list, bfromcstr(recipients[i++]));
-        }
-        recipient = recipients_list;
-        while (recipient != NULL)
-        {
-            if (recipient->str != NULL) {
-                bstring brecipient = recipient->str;
-                printf("send to: %s\n", brecipient->data);
-                if (sendmsg(bsender, recipient, recipients_list, bmsg) == -1) {
-                    fprintf(stderr, "Error sending message to %s\n", brecipient->data);
-                }
-            }
-            recipient = recipient->next;
-        }
-        bdestroy(bsender);
-        bdestroy(bmsg);
-        freeList(recipients_list);
-        return 0;
-    }
+//     if (strcmp(op, "sendmsg") == 0) {
+//         char *msg;
+//         char *sender;
+//         char **recipients;
+//         struct Node *recipients_list;
+//         struct Node *recipient;
+//         int i = 0;
+//         if (argc < 5) {
+//             fprintf(stderr, "bad arg count; usage: boromailutils sendmsg <msg> <sender> <recipients..>\n");
+//             return 1;
+//         }
+//         msg = argv[2];
+//         sender = argv[3];
+//         recipients = argv + 4;
+//         recipients_list = createList();
+//         bstring bsender = bfromcstr(sender);
+//         bstring bmsg = bfromcstr(msg);
+//         while (recipients[i] != NULL) {
+//             appendList(&recipients_list, bfromcstr(recipients[i++]));
+//         }
+//         recipient = recipients_list;
+//         while (recipient != NULL)
+//         {
+//             if (recipient->str != NULL) {
+//                 bstring brecipient = recipient->str;
+//                 printf("send to: %s\n", brecipient->data);
+//                 if (sendmsg(bsender, recipient, recipients_list, bmsg) == -1) {
+//                     fprintf(stderr, "Error sending message to %s\n", brecipient->data);
+//                 }
+//             }
+//             recipient = recipient->next;
+//         }
+//         bdestroy(bsender);
+//         bdestroy(bmsg);
+//         freeList(recipients_list);
+//         return 0;
+//     }
 
-    if (strcmp(op, "verifysign") == 0) {
-        char *sender;
-        // calling process should write message to tmp file in ca sandbox
-        char *msg_file;
-        // calling process should create tmp file for verification output in ca sandbox
-        char *ver_out_file;
+//     if (strcmp(op, "verifysign") == 0) {
+//         char *sender;
+//         // calling process should write message to tmp file in ca sandbox
+//         char *msg_file;
+//         // calling process should create tmp file for verification output in ca sandbox
+//         char *ver_out_file;
 
-        if (argc != 5) {
-            fprintf(stderr, "bad arg count; usage: boromailutils verifysign <username> <msgfile> <veroutfile>\n");
-            return 1;
-        }
-        sender = argv[2];
-        msg_file = argv[3];
-        ver_out_file = argv[4];
-        return verifysign(sender, msg_file, ver_out_file);
-    }
-}
+//         if (argc != 5) {
+//             fprintf(stderr, "bad arg count; usage: boromailutils verifysign <username> <msgfile> <veroutfile>\n");
+//             return 1;
+//         }
+//         sender = argv[2];
+//         msg_file = argv[3];
+//         ver_out_file = argv[4];
+//         return verifysign(sender, msg_file, ver_out_file);
+//     }
+// }
