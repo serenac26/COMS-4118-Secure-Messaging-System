@@ -55,5 +55,4 @@ but it is still included in the body of the message
 ```
 
 ## Design Documentation
-need to convert to markdown
-https://docs.google.com/document/d/1J0lWIIuWZit5dgo3vR-ZorzSi4Fs7MPWzHYjdcN2mhU/edit?usp=sharing
+designdoc.pdf
