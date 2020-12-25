@@ -31,6 +31,14 @@ gen-certs:
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
+%.o: $(ONERING)/%.c
+	echo Compiling: $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+%.o: $(GOLLUM)/%.c
+	echo Compiling: $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
 %.o : %.c
 	echo Compiling: $<
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
@@ -51,10 +59,6 @@ faramail: faramail.o utils.o faramailutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o faramailutils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
-%.o: $(ONERING)/%.c
-	echo Compiling: $<
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
-
 # Start testing
 boromailutils: boromailutils.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
@@ -66,15 +70,16 @@ faramailutils: faramailutils.o utils.o $(BSTROBJS) $(B64OBJS)
 	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 	sudo cp faramailutils $(TREE)/server/bin
 
+gollumutils: gollumutils.o utils.o $(BSTROBJS)
+	echo Linking: $@
+	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
+	sudo cp gollumutils $(TREE)/client/bin
+
 servercomponents: verifysign msgout
 	sudo mv $^ $(TREE)/server/bin
-	
-verifysign: verifysign.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
 # End testing
 	
-client: signmsg encryptmsg decryptmsg sendmsg recvmsg
+client: sendmsg recvmsg
 	sudo mv $^ $(TREE)/client/bin
 	sudo cp $(GOLLUM)/makecsr.sh $(GOLLUM)/genkey.sh $(TREE)/client/bin
 	sudo cp imopenssl.cnf $(TREE)/client
@@ -89,25 +94,13 @@ changepw: change-pw.o utils.o $(BSTROBJS) $(B64OBJS)
 	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 #
 
-sendmsg: send-msg.o utils.o $(BSTROBJS) $(B64OBJS)
+sendmsg: send-msg.o utils.o gollumutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
+	$(CC) $< utils.o gollumutils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
-recvmsg: recv-msg.o utils.o $(BSTROBJS) $(B64OBJS)
+recvmsg: recv-msg.o utils.o gollumutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
-	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
-
-signmsg: signmsg.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
-
-encryptmsg: encryptmsg.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
-
-decryptmsg: decryptmsg.o
-	echo Linking: $@
-	$(CC) $< -o $@ $(LFLAGS)
+	$(CC) $< utils.o gollumutils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
 testutils: testutils.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
@@ -118,7 +111,7 @@ testutils: testutils.o utils.o $(BSTROBJS) $(B64OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f pemithor boromail boromailutils faramail faramailutils verifysign msgout signmsg encryptmsg decryptmsg get-cert change-pw send-msg recv-msg testutils *.o
+	rm -f pemithor boromail boromailutils faramail faramailutils gollumutils getcert changepw sendmsg recvmsg testutils *.o
 
 .PHONY : all
 .PHONY : install

@@ -289,9 +289,9 @@ int handleChangePw(char *cert, bstring busername, bstring boldpw,
   }
 }
 
-void sendGood(SSL *ssl, int connection, void *content) {
-  bstring toSend = bformat("200 OK\nconnection: %s\ncontent-length: %d\n\n%s\n",
-                           connection == 2 ? "close" : "keep-alive",
+void sendGood(SSL *ssl, int connection, void *content, int code) {
+  bstring toSend = bformat("%d OK\nconnection: %s\ncontent-length: %d\n\n%s\n",
+                           code, connection == 2 ? "close" : "keep-alive",
                            strlen(content) + 1, content);
   SSL_write(ssl, toSend->data, toSend->slen);
   bdestroy(toSend);
@@ -559,6 +559,8 @@ int main(int mama, char **moo) {
 
         bstring bdata = bfromcstr(data);
 
+        int code = 200;
+
         bstring path = bfromcstr(vl.path);
         if (action == 2 && bstrccmp(path, "/getcert") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
@@ -600,10 +602,10 @@ int main(int mama, char **moo) {
 
           memset(cert, '\0', sizeof(cert));
           int certLen;
-          int r;
+          int r = handleGetCert(cert, usernamevalue, passwordvalue, csrvalue,
+                                &certLen);
 
-          if ((r = handleGetCert(cert, usernamevalue, passwordvalue, csrvalue,
-                                 &certLen)) != 0) {
+          if (r != 0 && r != -5) {
             bstring err = bformat("Handler returned with error %d\n", r);
             sendBad(ssl, err->data);
             bdestroy(err);
@@ -616,6 +618,8 @@ int main(int mama, char **moo) {
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;
+          } else if (r == -5) {
+            code = 201;
           }
 
           bstring certKey = bfromcstr("certificate");
@@ -631,7 +635,7 @@ int main(int mama, char **moo) {
           };
           bdestroy(certKey);
           bdestroy(certValue);
-          sendGood(ssl, 2, certData->data);
+          sendGood(ssl, 2, certData->data, code);
           bdestroy(certData);
 
         } else if (action == 2 && bstrccmp(path, "/changepw") == 0) {
@@ -714,7 +718,7 @@ int main(int mama, char **moo) {
 
           bdestroy(certKey);
           bdestroy(certValue);
-          sendGood(ssl, 2, certData->data);
+          sendGood(ssl, 2, certData->data, code);
 
           bdestroy(certData);
         } else {

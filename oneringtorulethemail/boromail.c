@@ -285,9 +285,9 @@ int handleRecvMsg(bstring recipient, char **msg) {
 }
 // free(msg);
 
-void sendGood(SSL *ssl, int connection, void *content) {
-  bstring toSend = bformat("200 OK\nconnection: %s\ncontent-length: %d\n\n%s\n",
-                           connection == 2 ? "close" : "keep-alive",
+void sendGood(SSL *ssl, int connection, void *content, int code) {
+  bstring toSend = bformat("%d OK\nconnection: %s\ncontent-length: %d\n\n%s\n",
+                           code, connection == 2 ? "close" : "keep-alive",
                            strlen(content) + 1, content);
   SSL_write(ssl, toSend->data, toSend->slen);
   bdestroy(toSend);
@@ -571,6 +571,8 @@ int main(int mama, char **moo) {
 
         bstring bdata = bfromcstr(data);
 
+        int code = 200;
+
         bstring path = bfromcstr(vl.path);
         if (action == 2 && bstrccmp(path, "/getusercert") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
@@ -621,7 +623,7 @@ int main(int mama, char **moo) {
           };
           bdestroy(certKey);
           bdestroy(certValue);
-          sendGood(ssl, 2, certData->data);
+          sendGood(ssl, 2, certData->data, code);
           bdestroy(certData);
         } else if (action == 2 && bstrccmp(path, "/sendmsg") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
@@ -667,7 +669,7 @@ int main(int mama, char **moo) {
             goto cleanup;
           }
 
-          sendGood(ssl, connection, "");
+          sendGood(ssl, connection, "", code);
         } else if (action == 2 && bstrccmp(path, "/receivemsg") == 0) {
           X509 *cert = SSL_get_peer_certificate(ssl);
           X509_NAME *certname = X509_get_subject_name(cert);
@@ -701,7 +703,7 @@ int main(int mama, char **moo) {
             goto cleanup;
           }
 
-          sendGood(ssl, connection, msg);
+          sendGood(ssl, connection, msg, code);
           free(msg);
         } else {
           sendBad(ssl, ERR_MALFORMED_REQUEST);
