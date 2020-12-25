@@ -10,9 +10,9 @@ cd <tree>/server/bin
 ./pemithor
 ```
 In another shell:
-`sudo ./test.sh <tree>`
+`sudo ./test.sh <tree> <runspam>`
 
-Note that you can only run this test script once after installing a new directory. On subsequent runs, the server and CA will not be in the expected initial states anymore and tests will fail. You must start with a fresh directory tree before testing with `test.sh`.
+Note that you can only run this test script once after installing a new directory. In addition, runspam is an intensive test that takes a long time to execute. On subsequent runs, the server and CA will not be in the expected initial states anymore and tests will fail. You must start with a fresh directory tree before testing with `test.sh`.
 
 ## Functionality Tests
 

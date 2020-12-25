@@ -2,22 +2,17 @@
 
 # run with sudo
 
-# /usr/bin/expect -c "
-#         spawn ./sendmsg $certA $keyA $tmp/$msg
-#         expect \"Enter PEM pass phrase:\";
-#         send \"pass\n\";
-#         expect eof;
-#         "
+RUNSPAM=$2
 
 tmp=../../../test/tmp
 mail=../../server/mail
 
 A=addleness
-Ap="$(sudo grep 'addleness' ../$1/creds.txt | cut -d' ' -f3)"
+Ap="$(sudo grep 'addleness' creds.txt | cut -d' ' -f3)"
 B=muermo
-Bp="$(sudo grep 'muermo' ../$1/creds.txt | cut -d' ' -f3)"
+Bp="$(sudo grep 'muermo' creds.txt | cut -d' ' -f3)"
 C=forfend
-Cp="$(sudo grep 'forfend' ../$1/creds.txt | cut -d' ' -f3)"
+Cp="$(sudo grep 'forfend' creds.txt | cut -d' ' -f3)"
 
 keysuffix=.key.pem
 certsuffix=.cert.pem
@@ -686,20 +681,22 @@ testsecurity () {
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
-    # testspamsendmsg
-    # if [ $? -ne 0 ]; then
-    #     echo "Test Spam sendmsg FAILED"
-    #     rm -f $msgout; return 1
-    # fi
-    # echo "___________________________________________________________________________"
-    # echo "___________________________________________________________________________"
-    # testspamchangepw
-    # if [ $? -ne 0 ]; then
-    #     echo "Test Spam changepw FAILED"
-    #     rm -f $msgout; return 1
-    # fi
-    # echo "___________________________________________________________________________"
-    # echo "___________________________________________________________________________"
+    if [ "$RUNSPAM" = true ] ; then
+        testspamsendmsg
+        if [ $? -ne 0 ]; then
+            echo "Test Spam sendmsg FAILED"
+            rm -f $msgout; return 1
+        fi
+        echo "___________________________________________________________________________"
+        echo "___________________________________________________________________________"
+        testspamchangepw
+        if [ $? -ne 0 ]; then
+            echo "Test Spam changepw FAILED"
+            rm -f $msgout; return 1
+        fi
+        echo "___________________________________________________________________________"
+        echo "___________________________________________________________________________"
+    fi
     
     echo "ALL SECURITY TESTS PASSED"
     
