@@ -102,6 +102,7 @@ sendmsg: send-msg.o utils.o gollumutils.o $(BSTROBJS) $(B64OBJS)
 recvmsg: recv-msg.o utils.o gollumutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o gollumutils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
+	sudo cp recvmsg $(TREE)/client/bin
 
 testutils: testutils.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
