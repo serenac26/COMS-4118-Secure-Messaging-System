@@ -5,7 +5,7 @@
 In one shell:
 `sudo ../pemithor`
 In another shell:
-`./test.sh`
+`sudo ./test.sh <tree>`
 
 ## Functionality Tests
 

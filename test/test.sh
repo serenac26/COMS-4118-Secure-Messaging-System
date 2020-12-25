@@ -40,7 +40,7 @@ rm -f $tmp/$A* $tmp/$B* $tmp/$C*
 # Functionality tests
 
 msg1="MAIL FROM:<$A>\n
-MAIL TO:<$B>\n
+RCPT TO:<$B>\n
 Hello $B!\n
 Love,\n
 $A
@@ -311,8 +311,8 @@ testfunctionality5 () {
 }
 
 badmsg1="MAIL FROM:<$A>\n
-MAIL TO:<bad$B>\n
-MAIL TO:<$B>\n
+RCPT TO:<bad$B>\n
+RCPT TO:<$B>\n
 Hello $B!\n
 Love,\n
 $A\n
@@ -339,7 +339,7 @@ testfunctionality6 () {
 }
 
 badmsg2="MAIL FROM:<$A>\n
-MAIL TO:<$C>\n
+RCPT TO:<$C>\n
 Hello $C!\n
 Love,\n
 $A
@@ -429,7 +429,7 @@ testfunctionality () {
 # User Impersonation tests
 
 badmsg3="MAIL FROM:<$B>\n
-MAIL TO:<$C>\n
+RCPT TO:<$C>\n
 Hello $C!\n
 Love,\n
 $A
@@ -576,7 +576,7 @@ testlargemsg () {
 
     echo "write large message"
     echo "MAIL FROM:<$A>\n" >> $tmp/$msg
-    echo "MAIL TO:<$B>\n" >> $tmp/$msg
+    echo "RCPT TO:<$B>\n" >> $tmp/$msg
     for i in 1..1000000; do
         echo "." >> $tmp/$msg
     done
@@ -598,7 +598,7 @@ testlargemsg () {
 }
 
 smolmsg="MAIL FROM:<$A>\n
-MAIL TO:<$B>\n
+RCPT TO:<$B>\n
 "
 
 testspamsendmsg () {
