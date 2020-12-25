@@ -15,8 +15,9 @@ Group members:
 
 ### Start the server
 ```
-sudo cd <treename>/server/bin
-sudo ./pemithor
+sudo su
+cd <treename>/server/bin
+./pemithor
 ```
 
 ### Send client requests

@@ -2,8 +2,13 @@
 
 ## Run Tests
 `sudo rm -rf <tree> && make clean && make install TREE=<tree>`
+
 In one shell:
-`sudo ../pemithor`
+```
+sudo su
+cd <tree>/server/bin
+./pemithor
+```
 In another shell:
 `sudo ./test.sh <tree>`
 
