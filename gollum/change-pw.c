@@ -20,10 +20,13 @@
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
+
+#define BUF_SIZE 100
+
 //./change-pw <username> <privatekeyfile> 
 int main(int argc, char *argv[]) {
 
-    if (argc != 2) {
+    if (argc != 3) {
         fprintf(stderr, "bad arg count; usage: change-pw <username> <key-file>\n");
 		return 1;
     }
@@ -38,24 +41,13 @@ int main(int argc, char *argv[]) {
         printf("input too large: must be 32 or less characters\n");
     }
 
-    FILE *fp;
-    fp = fopen(newkeyfile, "r+");
-    fseek(fp, 0, SEEK_END);
-    long fsize = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    char *privatekey = malloc(fsize +1);
-    fread(privatekey, 1, fsize, fp);
-    fclose(fp);
-    privatekey[fsize] = 0;
-
     char *tempfile = "temp.txt";
     int pid, wpid;
     int status = 0;
     pid = fork();
     //CHANGE int config and directory 
     if (pid == 0) {
-        execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username, privatekey, tempfile);
+        execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username, argv[2], tempfile);
     }
     while ((wpid = wait(&status)) > 0);
     FILE *temp; 
@@ -137,10 +129,10 @@ sbio=BIO_new(BIO_s_socket());
 
     char *buffer = (char *) malloc(sizeof(char)*bytes);
 
-    char header[100];
+    char header[BUF_SIZE];
     sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", port, method);
     char *header2 = "connection: close\n";
-    char header3[100];
+    char header3[BUF_SIZE];
 
     char usernameLine[sizeof(username)+strlen("username:\n")];
     sprintf(usernameLine, "username:%s\n", username);
@@ -167,7 +159,7 @@ sbio=BIO_new(BIO_s_socket());
     
     char ibuf[1000];
     memset(ibuf, '\0', sizeof(ibuf));
-    char certif[1000];
+    char certif[bytes];
     certif[0] = '\0';
     int state = 0;
     char writePath[100];
@@ -182,7 +174,7 @@ sbio=BIO_new(BIO_s_socket());
             scanf("%s", writePath);
             state = 1;
         } else if ((strstr(ibuf, "400") != NULL) && (state == 0)) {
-            printf("Error 400: Problem with username, password or key.");
+            printf("Error 400: Bad Request");
             break;
         } else if ((state == 1) && (ibuf[0] == '\n')) {
             state = 2;
