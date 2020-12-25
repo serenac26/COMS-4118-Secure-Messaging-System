@@ -45,17 +45,32 @@ int create_socket(int port) {
 //./get-cert <username> <privatekeyfile>
 int main(int argc, char *argv[]) {
   if (argc != 3) {
-    fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file\n");
+    fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file>\n");
   }
   char *username = argv[1];
   char *password = getpass("Enter password: ");
 
   if ((strlen(username) > 32) || (strlen(password) > 32)) {
-    printf("input too large: must be 32 or less characters\n");
+    printf("input too large: must be <=32 characters\n");
   }
 
   char *privatekeyfile = argv[2];
-
+  struct stat filestatus;
+  if (stat(privatekeyfile, &filestatus) != 0) {
+    fprintf(stderr, "Private key file does not exist\n");
+    return 1;
+  }
+  BIO *keybio = BIO_new_file(privatekeyfile, "r");
+  EVP_PKEY *key = NULL;
+  key = PEM_read_bio_PrivateKey(keybio, NULL, 0, NULL);
+  if (!key) {
+    fprintf(stderr, "Error reading private key file\n");
+    BIO_free(keybio);
+    EVP_PKEY_free(key);
+    return 1;
+  }
+  BIO_free(keybio);
+  EVP_PKEY_free(key);
   char *tempfile = "../tmp/temp.txt";
   int pid, wpid;
   int status = 0;
@@ -63,6 +78,8 @@ int main(int argc, char *argv[]) {
   if (pid == 0) {
     execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username,
           privatekeyfile, tempfile, '\0');
+    perror("execl failed");
+    return 1;
   }
   if ((wpid = wait(&status)) < 0) exit(1);
   FILE *temp;
