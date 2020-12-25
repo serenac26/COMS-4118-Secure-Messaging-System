@@ -246,7 +246,7 @@ int main(int argc, char *argv[]) {
     remove(unsigned_decrypted_file);
     return -1;
   }
-  remove(unsigned_encrypted_file);
+  // remove(unsigned_encrypted_file);
 
 
   // Get sender name from unsigned.decrypted.msg header
@@ -304,7 +304,7 @@ int main(int argc, char *argv[]) {
   bdestroy(inp);
   regfree(&mailfrom);
   fclose(fp);
-  remove(unsigned_decrypted_file);
+  // remove(unsigned_decrypted_file);
 
 
   // Send sender name to server /getusercert
@@ -322,7 +322,6 @@ int main(int argc, char *argv[]) {
     SSL_write(ssl, gucheader3, strlen(gucheader3));
     SSL_write(ssl, "\n", strlen("\n"));
     SSL_write(ssl, gucrecipientLine, strlen(gucrecipientLine));
-    SSL_write(ssl, "\n", strlen("\n"));
 
 
     // Server sends back recipient certificate which we write to temp file s_certfile 
