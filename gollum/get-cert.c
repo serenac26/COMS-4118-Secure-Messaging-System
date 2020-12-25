@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 
   char *privatekeyfile = argv[2];
 
-  char *tempfile = "temp.txt";
+  char *tempfile = "../tmp/temp.txt";
   int pid, wpid;
   int status = 0;
   pid = fork();
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
   memset(csr, '\0', fsize1 + 1);
   fread(csr, 1, fsize1, temp);
   fclose(temp);
-  remove("temp.txt");
+  remove(tempfile);
 
   // SSL handshake verification
 
