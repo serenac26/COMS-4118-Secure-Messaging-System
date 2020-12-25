@@ -26,6 +26,9 @@
 #define UNSIGNED_ENCRYPTED_MSG "../tmp/unsigned.encrypted.msg"
 #define SIGNED_ENCRYPTED_MSG "../tmp/signed.encrypted.msg"
 
+#define GETUSERCERT "getusercert"
+#define SENDMESSAGE "sendmsg"
+
 #define RCPTTO_REGEX "^\\.?rcpt to:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
 #define MAILFROM_REGEX "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
 
@@ -36,7 +39,9 @@
 
 int verify_callback(int ok, X509_STORE_CTX *ctx) {
   /* Tolerate certificate expiration */
-  fprintf(stderr, "verify callback error: %d\n", X509_STORE_CTX_get_error(ctx));
+  if (!ok) {
+    fprintf(stderr, "verify callback error: %d\n", X509_STORE_CTX_get_error(ctx));
+  }
   /* Otherwise don't override */
   return ok;
 }
@@ -66,7 +71,7 @@ int create_socket(int port) {
 
 int main(int argc, char *argv[]) {
   struct stat st;
-  char *certfile, *keyfile, *msginfile, *buffer, *request;
+  char *certfile, *keyfile, *msginfile, *buffer, *response;
   char *line = NULL;
   size_t size = 0;
   FILE *fp;
@@ -260,30 +265,21 @@ int main(int argc, char *argv[]) {
     }
     i++;
     // fprintf(stdout, "recipient: %s\n", (char *)r->data);
-
     
-    int bytes = (1024*1024);
-    char *method = "getusercert";
-    char *request = (char *) malloc(sizeof(char)*bytes);
-    
-    char header[100];
-    sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, method);
+    char header[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, GETUSERCERT)];
+    sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, GETUSERCERT);
     char *header2 = "connection: close\n"; // TODO: change to keep-alive
-    char header3[100];
-    char recipientLine[strlen((char *)r->data)+strlen("recipient:\n")+1];
+    char recipientLine[snprintf(0, 0, "recipient:%s\n", (char *)r->data)];
     sprintf(recipientLine, "recipient:%s\n", (char *)r->data);
+    char header3[snprintf(0, 0, "content-length: %ld\n", strlen(recipientLine))];
     sprintf(header3, "content-length: %ld\n", strlen(recipientLine));
     
-    sprintf(request, "%s%s%s%s%s%s", header, header2, header3, "\n", recipientLine, "\n");
-    fprintf(stdout, "Buffer:\n%s", request);
     SSL_write(ssl, header, strlen(header));
     SSL_write(ssl, header2, strlen(header2));
     SSL_write(ssl, header3, strlen(header3));
     SSL_write(ssl, "\n", strlen("\n"));
     SSL_write(ssl, recipientLine, strlen(recipientLine));
     SSL_write(ssl, "\n", strlen("\n"));
-    free(request);
-    request = NULL;
 
 
     // Server sends back recipient certificate which we write to temp file r_certfile 
@@ -291,7 +287,7 @@ int main(int argc, char *argv[]) {
       // remove(r_certfile);
       // curr = curr->next;
       // continue;
-    char *response = (char *)malloc(MB);
+    response = (char *)malloc(MB);
     if (!response) {
       remove(r_certfile);
       curr = curr->next;
@@ -330,7 +326,7 @@ int main(int argc, char *argv[]) {
         bdestroy(bresponse);
         bdestroy(bkey);
         bdestroy(bvalue);
-        freeList(lines);
+        bstrListDestroy(lines);
         continue;
       }
       if (0 != bstrccmp(bkey, "certificate")) {
@@ -341,13 +337,15 @@ int main(int argc, char *argv[]) {
         bdestroy(bresponse);
         bdestroy(bkey);
         bdestroy(bvalue);
-        freeList(lines);
+        bstrListDestroy(lines);
         continue;
       }
       fp = fopen(r_certfile, "w");
       fputs((char *)bvalue->data, fp);
       fclose(fp);
       fp = NULL;
+      free(response);
+      response = NULL;
       bdestroy(bresponse);
       bdestroy(bkey);
       bdestroy(bvalue);
@@ -400,21 +398,6 @@ int main(int argc, char *argv[]) {
 
 
     // TODO: Send the signed message to the server /msgin
-    // int bytes = (1024*1024);
-    // char *method = "getusercert";
-    // *request = (char *) malloc(sizeof(char)*bytes);
-    
-    // char header[100];
-    // sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, method);
-    // char *header2 = "connection: close\n"; // TODO: change to keep-alive
-    // char header3[100];
-    // char recipientLine[strlen((char *)r->data)+strlen("recipient:\n")+1];
-    // sprintf(recipientLine, "recipient:%s\n", (char *)r->data);
-    // sprintf(header3, "content-length: %ld\n", strlen(recipientLine));
-    
-    // sprintf(buffer, "%s%s%s%s%s%s", header, header2, header3, "\n", recipientLine, "\n");
-    // fprintf(stdout, "Buffer:\n%s", buffer);
-    // SSL_write(ssl, buffer, strlen(buffer));
     
     // TODO: Check if curr->next == NULL and close connection with server
     // Error handling:
