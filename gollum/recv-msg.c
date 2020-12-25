@@ -29,7 +29,7 @@
 #define SIGNED_ENCRYPTED_MSG "../tmp/signed.encrypted.msg"
 
 #define GETUSERCERT "getusercert"
-#define RECEIVEMESSAGE "receivemessage"
+#define RECEIVEMESSAGE "receivemsg"
 
 #define MAILFROM_REGEX "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
 
@@ -87,6 +87,7 @@ int main(int argc, char *argv[]) {
   msgoutfile = argv[3];
 
 
+  
   // SSL handshake verification
 
   SSL_library_init();       /* load encryption & hash algorithms for SSL */
@@ -150,6 +151,84 @@ int main(int argc, char *argv[]) {
 
   memset(rbuf, '\0', sizeof(rbuf));
   memset(wbuf, '\0', sizeof(wbuf));
+  
+  
+
+  // Get message /receivemessage
+  char rmheader[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, RECEIVEMESSAGE)];
+  sprintf(rmheader, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, RECEIVEMESSAGE);
+  char *rmheader2 = "connection: keep-alive\n";
+  char *rmheader3 = "content-length: 0\n";
+  
+  SSL_write(ssl, rmheader, strlen(rmheader));
+  SSL_write(ssl, rmheader2, strlen(rmheader2));
+  SSL_write(ssl, rmheader3, strlen(rmheader3));
+  SSL_write(ssl, "\n", strlen("\n"));
+  SSL_write(ssl, "\n", strlen("\n"));
+  
+
+  // Server sends back recipient certificate which we write to temp file signed_encrypted_file
+  response = (char *)malloc(MB);
+  if (!response) {
+    fprintf(stderr, "Malloc failed.\n");
+    return -1;
+  }
+  *response = '\0';
+  char code[4];
+  int readReturn = SSL_peek(ssl, code, sizeof(code)-1);
+  if (readReturn == 0) {
+    free(response);
+    response = NULL;
+    return -1;
+  }
+  code[sizeof(code)-1] = '\0';
+  printf("Code: %s\n", code);
+  int state = 0;
+  while ((strstr(code, "200") != NULL || 1)) {
+    state = 1;
+    char buf[2];
+    readReturn = SSL_read(ssl, buf, 1);
+    buf[1] = '\0';
+    if (readReturn == 0) {
+      break;
+    }
+    sprintf(response+strlen(response), "%s", buf);
+  }
+  printf("%s\n", response);
+  if ((state == 1) && (response != NULL)) {
+    bstring bresponse = bfromcstr(response);
+    struct bstrList *lines = bsplit(bresponse, '\n');
+    bstring bkey = bfromcstr("");
+    bstring bvalue = bfromcstr("");
+    if (0 != deserializeData(bkey, bvalue, lines->entry[4], 1)) {
+      free(response);
+      response = NULL;
+      bdestroy(bresponse);
+      bdestroy(bkey);
+      bdestroy(bvalue);
+      bstrListDestroy(lines);
+      return -1;
+    }
+    if (0 != bstrccmp(bkey, "message")) {
+      free(response);
+      response = NULL;
+      bdestroy(bresponse);
+      bdestroy(bkey);
+      bdestroy(bvalue);
+      bstrListDestroy(lines);
+      return -1;
+    }
+    fp = fopen(signed_encrypted_file, "w");
+    fputs((char *)bvalue->data, fp);
+    fclose(fp);
+    fp = NULL;
+    free(response);
+    response = NULL;
+    bdestroy(bresponse);
+    bdestroy(bkey);
+    bdestroy(bvalue);
+    bstrListDestroy(lines);
+  }
   
 
   // Get encrypted message from signed.encrypted.msg without verifying and write to temp file unsigned.encrypted.msg
@@ -256,8 +335,8 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     *response = '\0';
-    char code[4];
-    int readReturn = SSL_peek(ssl, code, sizeof(code)-1);
+    char code2[4];
+    readReturn = SSL_peek(ssl, code2, sizeof(code2)-1);
     if (readReturn == 0) {
       remove(s_certfile);
       bdestroy(sender);
@@ -265,9 +344,9 @@ int main(int argc, char *argv[]) {
       response = NULL;
       return -1;
     }
-    code[sizeof(code)-1] = '\0';
-    int state = 0;
-    while ((strstr(code, "200") != NULL)) {
+    code2[sizeof(code2)-1] = '\0';
+    state = 0;
+    while ((strstr(code2, "200") != NULL)) {
       state = 1;
       char buf[2];
       readReturn = SSL_read(ssl, buf, 1);
@@ -314,7 +393,6 @@ int main(int argc, char *argv[]) {
       bdestroy(bkey);
       bdestroy(bvalue);
       bstrListDestroy(lines);
-      printf("Wrote certificate to: %s\n", s_certfile);
     }
 
 
@@ -326,6 +404,7 @@ int main(int argc, char *argv[]) {
     bdestroy(sender);
     return -1;
   }
+  printf("Wrote message to: %s\n", msgoutfile);
 
   // remove(signed_encrypted_file);
   // remove(s_certfile);
