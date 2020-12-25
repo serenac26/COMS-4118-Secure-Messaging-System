@@ -302,6 +302,7 @@ int handleRecvMsg(bstring recipient, char **msg) {
 // free(msg);
 
 void sendGood(SSL *ssl, int connection, void *content, int code) {
+  if (strlen(content) + 1 == 1) printf("HAHAHAHADOO DOO\n");
   bstring toSend = bformat("%d OK\nconnection: %s\ncontent-length: %d\n\n%s\n",
                            code, connection == 2 ? "close" : "keep-alive",
                            strlen(content) + 1, content);
@@ -658,6 +659,7 @@ int main(int mama, char **moo) {
           };
           bdestroy(certKey);
           bdestroy(certValue);
+          pb("\n\n===%s===\n\n", certData->data)
           sendGood(ssl, 2, certData->data, code);
           bdestroy(certData);
         } else if (action == 2 && bstrccmp(path, "/sendmsg") == 0) {

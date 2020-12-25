@@ -193,76 +193,69 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   code[sizeof(code)-1] = '\0';
-  int state = 0;
-  if (strstr(code, "200") != NULL) {
-    while (1) {
-      state = 1;
-      char buf[2];
-      readReturn = SSL_read(ssl, buf, 1);
-      buf[1] = '\0';
-      if (SSL_pending(ssl) == 0) {
-        break;
-      }
-      sprintf(response+strlen(response), "%s", buf);
+  while (1) {
+    char buf[2];
+    readReturn = SSL_read(ssl, buf, 1);
+    buf[1] = '\0';
+    if (SSL_pending(ssl) == 0) {
+      break;
     }
-  } else if (strstr(code, "-3") != NULL) {
-    fprintf(stderr, "Error: Could not receive message\n");      
-    free(response);
-    response = NULL;
-    cleanup;
-    return -1;
-  } else if (strstr(code, "-1") != NULL) {
-    fprintf(stderr, "Error: No Messages\n");
+    sprintf(response+strlen(response), "%s", buf);
+  }
+  if ((strstr(code, "200") == NULL) || (response == NULL)) {
+    if (strstr(code, "-3") != NULL) {
+      fprintf(stderr, "Error: Could not receive message\n");
+    } else if (strstr(code, "-1") != NULL) {
+      fprintf(stderr, "Error: No Messages\n");
+    }
     free(response);
     response = NULL;
     cleanup;
     return -1;
   }
   printf("%s\n", response);
-  if ((state == 1) && (response != NULL)) {
-    bstring bresponse = bfromcstr(response);
-    struct bstrList *lines = bsplit(bresponse, '\n');
-    bstring bkey = bfromcstr("");
-    bstring bvalue = bfromcstr("");
-    if (0 != deserializeData(bkey, bvalue, lines->entry[4], 1)) {
-      free(response);
-      response = NULL;
-      bdestroy(bresponse);
-      bdestroy(bkey);
-      bdestroy(bvalue);
-      bstrListDestroy(lines);
-      cleanup;
-      return -1;
-    }
-    if (0 != bstrccmp(bkey, "message")) {
-      free(response);
-      response = NULL;
-      bdestroy(bresponse);
-      bdestroy(bkey);
-      bdestroy(bvalue);
-      bstrListDestroy(lines);
-      cleanup;
-      return -1;
-    }
-    fp = fopen(signed_encrypted_file, "w");
-    if (!fp) {
-      free(response);
-      response = NULL;
-      bdestroy(bresponse);
-      bdestroy(bkey);
-      bdestroy(bvalue);
-      bstrListDestroy(lines);
-      cleanup;
-      return -1;
-    }
-    fputs((char *)bvalue->data, fp);
-    fclose(fp);
-    fp = NULL;
-    bdestroy(bresponse);
-    bdestroy(bkey);
-    bdestroy(bvalue);
-    bstrListDestroy(lines);
+  bstring bresponse2 = bfromcstr(response);
+  struct bstrList *lines2 = bsplit(bresponse2, '\n');
+  bstring bkey2 = bfromcstr("");
+  bstring bvalue2 = bfromcstr("");
+  if (0 != deserializeData(bkey2, bvalue2, lines2->entry[4], 1)) {
+    free(response);
+    response = NULL;
+    bdestroy(bresponse2);
+    bdestroy(bkey2);
+    bdestroy(bvalue2);
+    bstrListDestroy(lines2);
+    cleanup;
+    return -1;
   }
+  if (0 != bstrccmp(bkey2, "message")) {
+    free(response);
+    response = NULL;
+    bdestroy(bresponse2);
+    bdestroy(bkey2);
+    bdestroy(bvalue2);
+    bstrListDestroy(lines2);
+    cleanup;
+    return -1;
+  }
+  fp = fopen(signed_encrypted_file, "w");
+  if (!fp) {
+    free(response);
+    response = NULL;
+    bdestroy(bresponse2);
+    bdestroy(bkey2);
+    bdestroy(bvalue2);
+    bstrListDestroy(lines2);
+    cleanup;
+    return -1;
+  }
+  fputs((char *)bvalue2->data, fp);
+  fclose(fp);
+  fp = NULL;
+  bdestroy(bresponse2);
+  bdestroy(bkey2);
+  bdestroy(bvalue2);
+  bstrListDestroy(lines2);
   free(response);
   response = NULL;
 
@@ -386,83 +379,77 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   code2[sizeof(code2)-1] = '\0';
-  state = 0;
-  if (strstr(code2, "200") != NULL) {
-    while (1) {
-      state = 1;
-      char buf[2];
-      readReturn = SSL_read(ssl, buf, 1);
-      buf[1] = '\0';
-      if (readReturn == 0) {
-        break;
-      }
-      sprintf(response+strlen(response), "%s", buf);
+  printf("Code: %s\n", code2);
+  while (1) {
+    char buf[2];
+    readReturn = SSL_read(ssl, buf, 1);
+    buf[1] = '\0';
+    if (SSL_pending(ssl) == 0) {
+      break;
     }
-  } else if (strstr(code, "-2") != NULL) {
-    fprintf(stderr, "Error: Invalid Sender\n");
-    remove(s_certfile);
-    free(response);
-    response = NULL;
-    cleanup;
-    return -1;
-  } else if (strstr(code, "-3") != NULL) {
-    fprintf(stderr, "Error: Could not retrieve certificate\n");
+    sprintf(response+strlen(response), "%s", buf);
+  }
+  printf("%s\n", response);
+  if ((strstr(code2, "200") == NULL) || (response == NULL)) {
+    if (strstr(code, "-2") != NULL) {
+      fprintf(stderr, "Error: Invalid Sender\n");
+    } else if (strstr(code, "-3") != NULL) {
+      fprintf(stderr, "Error: Could not retrieve certificate\n");
+    }
     remove(s_certfile);
     free(response);
     response = NULL;
     cleanup;
     return -1;
   }
-  if ((state == 1) && (response != NULL)) {
-    bstring bresponse = bfromcstr(response);
-    struct bstrList *lines = bsplit(bresponse, '\n');
-    bstring bkey = bfromcstr("");
-    bstring bvalue = bfromcstr("");
-    if (0 != deserializeData(bkey, bvalue, lines->entry[4], 1)) {
-      remove(s_certfile);
-      free(response);
-      response = NULL;
-      bdestroy(bresponse);
-      bdestroy(bkey);
-      bdestroy(bvalue);
-      bstrListDestroy(lines);
-      bdestroy(sender);
-      cleanup;
-      return -1;
-    }
-    if (0 != bstrccmp(bkey, "certificate")) {
-      remove(s_certfile);
-      free(response);
-      response = NULL;
-      bdestroy(bresponse);
-      bdestroy(bkey);
-      bdestroy(bvalue);
-      bstrListDestroy(lines);
-      bdestroy(sender);
-      cleanup;
-      return -1;
-    }
-    fp = fopen(s_certfile, "w");
-    if (!fp) {
-      free(response);
-      response = NULL;
-      bdestroy(bresponse);
-      bdestroy(bkey);
-      bdestroy(bvalue);
-      bstrListDestroy(lines);
-      cleanup;
-      return -1;
-    }
-    fputs((char *)bvalue->data, fp);
-    fclose(fp);
-    fp = NULL;
+  bstring bresponse = bfromcstr(response);
+  struct bstrList *lines = bsplit(bresponse, '\n');
+  bstring bkey = bfromcstr("");
+  bstring bvalue = bfromcstr("");
+  if (0 != deserializeData(bkey, bvalue, lines->entry[4], 1)) {
+    remove(s_certfile);
     free(response);
     response = NULL;
     bdestroy(bresponse);
     bdestroy(bkey);
     bdestroy(bvalue);
     bstrListDestroy(lines);
+    bdestroy(sender);
+    cleanup;
+    return -1;
   }
+  if (0 != bstrccmp(bkey, "certificate")) {
+    remove(s_certfile);
+    free(response);
+    response = NULL;
+    bdestroy(bresponse);
+    bdestroy(bkey);
+    bdestroy(bvalue);
+    bstrListDestroy(lines);
+    bdestroy(sender);
+    cleanup;
+    return -1;
+  }
+  fp = fopen(s_certfile, "w");
+  if (!fp) {
+    free(response);
+    response = NULL;
+    bdestroy(bresponse);
+    bdestroy(bkey);
+    bdestroy(bvalue);
+    bstrListDestroy(lines);
+    cleanup;
+    return -1;
+  }
+  fputs((char *)bvalue->data, fp);
+  fclose(fp);
+  fp = NULL;
+  free(response);
+  response = NULL;
+  bdestroy(bresponse);
+  bdestroy(bkey);
+  bdestroy(bvalue);
+  bstrListDestroy(lines);
 
 
   // Verify sender of signed-message using sender.cert.pem and 
