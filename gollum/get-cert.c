@@ -206,22 +206,23 @@ int main(int argc, char *argv[]) {
       printf("Enter a path for cert: \n");
       scanf("%s", writePath);
       state = 1;
-    } else if ((strstr(ibuf, "400") != NULL) && (state == 0)) {
-      printf("Error 400: Problem with username, password or key.");
-      break;
-    } else if ((strstr(ibuf, "-2") != NULL) && (state == 0)) {
-      printf("Error -2: Wrong Password");
-      break;
-    } else if ((strstr(ibuf, "-1") != NULL) && (state == 0)) {
-      printf("Error -1: Bad Username");
-      break;
-    } else if ((strstr(ibuf, "-3") != NULL) && (state == 0)) {
-      printf("Error -3: Opening file or directory error");
     } else if ((strstr(ibuf, "201 OK") != NULL) && (state == 0)) {
       printf("Warning: Certificate exists already!");
       printf("Enter a path for cert: \n");
       scanf("%s", writePath);
       state = 1;
+    } else if ((strstr(ibuf, "-1") != NULL) && (state == 0)) {
+      printf("Error -1: Bad Username");
+      break;
+    } else if ((strstr(ibuf, "-2") != NULL) && (state == 0)) {
+      printf("Error -2: Wrong Password");
+      break;
+    } else if ((strstr(ibuf, "-3") != NULL) && (state == 0)) {
+      printf("Error -3: Opening file or directory error");
+      break;
+    } else if ((strstr(ibuf, "400") != NULL) && (state == 0)) {
+      printf("Error 400: Problem with username, password or key.");
+      break;
     } else if ((state == 1) && (ibuf[0] == '\n')) {
       state = 2;
     } else if ((state == 2) && (ibuf[0] != '\n')) {
@@ -229,6 +230,9 @@ int main(int argc, char *argv[]) {
       bconcat(certif, _ibuf);
       bdestroy(_ibuf);
     } else if ((state == 2) && (ibuf[0] == '\n')) {
+      break;
+    } else {
+      printf("not handled\n");
       break;
     }
   }
