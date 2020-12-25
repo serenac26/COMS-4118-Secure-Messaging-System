@@ -29,6 +29,8 @@
   "Connection must be either close or keep-alive\n"
 #define ERR_INSUFFICIENT_CONTENT_SENT \
   "Send more content you stingy fuck nOoo~ you're so sexy aha 😘\n"
+#define ERR_ABUNDANT_CONTENT_SENT \
+  "Send less content you liberal fuck nOoo~ you're so sexy aha 😘\n"
 #define ERR_MALFORMED_REQUEST "Your request body was malformed\n"
 
 #define ERR_NO_MSG (-1)
@@ -541,6 +543,10 @@ int main(int mama, char **moo) {
           SSL_write(ssl, ERR_INSUFFICIENT_CONTENT_SENT,
                     strlen(ERR_INSUFFICIENT_CONTENT_SENT));
           break;
+        } else if (contentReceived > contentLength) {
+          SSL_write(ssl, ERR_ABUNDANT_CONTENT_SENT,
+                    strlen(ERR_ABUNDANT_CONTENT_SENT));
+          break;
         }
 
         data[contentLength] = '\0';
@@ -664,7 +670,7 @@ int main(int mama, char **moo) {
 
           if (deserializeData(recipientkey, recipientvalue, lines->entry[0],
                               0) != 0 ||
-              deserializeData(messagekey, messagevalue, lines->entry[1], 0) !=
+              deserializeData(messagekey, messagevalue, lines->entry[1], 1) !=
                   0 ||
               bstrccmp(recipientkey, "recipient") != 0 ||
               bstrccmp(messagekey, "message") != 0) {
