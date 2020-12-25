@@ -17,6 +17,7 @@ im=$ca/intermediate
 mkdir $ca/certs $ca/intermediate $ca/newcerts $ca/private
 mkdir $im/certs $im/csr $im/newcerts $im/private
 
+rm -f ../test/tmp/creds.txt
 for f in /home/mailbox/*; do
     cred="$(python3 $pwd/crypt-pw.py ${f:14})"
     credarray=($cred)
