@@ -34,6 +34,7 @@
 #define ERR_NO_MSG (-1)
 #define ERR_INVALID_RCPT (-2)
 #define ERR_OPEN (-3)
+#define ERR_MAILBOX_FULL (-4)
 
 #define KEYPASS "pass"
 
@@ -269,6 +270,8 @@ int handleSendMsg(bstring recipient, bstring msg) {
   int ret = sendmessage(recipient, msg);
   if (ret == -1) {
     return ERR_OPEN;
+  } else if (ret == -2) {
+    return ERR_MAILBOX_FULL;
   }
   return 0;
 }
