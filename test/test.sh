@@ -4,12 +4,22 @@
 # the tests will handle switching to the correct mail users before running commands
 # to ensure that permissions are being honored
 
+# /usr/bin/expect -c "
+#         spawn ./sendmsg $certA $keyA $tmp/$msg
+#         expect \"Enter PEM pass phrase:\";
+#         send \"pass\n\";
+#         expect eof;
+#         "
+
 tmp=../../../test/tmp
 mail=../../server/mail
 
 A=addleness
+Ap="$(sudo grep 'addleness' ../$1/creds.txt | cut -d' ' -f3)"
 B=muermo
+Bp="$(sudo grep 'muermo' ../$1/creds.txt | cut -d' ' -f3)"
 C=forfend
+Cp="$(sudo grep 'forfend' ../$1/creds.txt | cut -d' ' -f3)"
 
 keysuffix=.key.pem
 certsuffix=.cert.pem
@@ -26,9 +36,10 @@ passA=pass
 passB=pass
 passC=pass
 
-pwprompt="Enter password: "
-newpwprompt="Enter new password: "
+pwprompt="Enter password:"
+newpwprompt="Enter new password:"
 keypassprompt="Enter PEM pass phrase:"
+passphraseprompt="Enter pass phrase for"
 certprompt="Enter certificate file path:"
 msgoutprompt="Enter message output file path:"
 
@@ -591,7 +602,14 @@ testspamsendmsg () {
 
     echo "Fill up $B's mailbox with 99999 messages"
     for i in {1..99999}; do
-        ./sendmsg $certA $keyA $tmp/$msg
+        /usr/bin/expect -c "
+        spawn ./sendmsg $certA $keyA $tmp/$msg
+        expect \"$keypassprompt\";
+        send \"$keypass\n\";
+        expect \"$keypassprompt\";
+        send \"$keypass\n\";
+        expect eof;
+        " >/dev/null 2>&1
         # expect $keypassprompt
         # send -- "$keypass\r"
     done
@@ -603,7 +621,14 @@ testspamsendmsg () {
     echo "___________________________________________________________________________"
 
     echo "Try to send 100000th message to $B"    
-    ./sendmsg $certA $keyA $tmp/$msg
+    /usr/bin/expect -c "
+    spawn ./sendmsg $certA $keyA $tmp/$msg
+    expect \"$keypassprompt\";
+    send \"$keypass\n\";
+    expect \"$keypassprompt\";
+    send \"$keypass\n\";
+    expect eof;
+    "
     # expect $keypassprompt
     # send -- "$keypass\r"
     if [ -f "$mail/$B/00000" ]; then
