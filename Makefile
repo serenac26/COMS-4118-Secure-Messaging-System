@@ -97,10 +97,12 @@ changepw: change-pw.o utils.o $(BSTROBJS) $(B64OBJS)
 sendmsg: send-msg.o utils.o gollumutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o gollumutils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
+	sudo cp sendmsg $(TREE)/client/bin
 
 recvmsg: recv-msg.o utils.o gollumutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o gollumutils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
+	sudo cp recvmsg $(TREE)/client/bin
 
 testutils: testutils.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
