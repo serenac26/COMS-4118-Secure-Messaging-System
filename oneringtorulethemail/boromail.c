@@ -4,6 +4,7 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <regex.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -301,6 +302,7 @@ int handleRecvMsg(bstring recipient, char **msg) {
 // free(msg);
 
 void sendGood(SSL *ssl, int connection, void *content, int code) {
+  if (strlen(content) + 1 == 1) printf("HAHAHAHADOO DOO\n");
   bstring toSend = bformat("%d OK\nconnection: %s\ncontent-length: %d\n\n%s\n",
                            code, connection == 2 ? "close" : "keep-alive",
                            strlen(content) + 1, content);
@@ -326,6 +328,7 @@ int pw_cb(char *buf, int size, int rwflag, void *u) {
 // http://h30266.www3.hpe.com/odl/axpos/opsys/vmsos84/BA554_90007/ch04s03.html
 // and https://wiki.openssl.org/index.php/Simple_TLS_Server for more information
 int main(int mama, char **moo) {
+  signal(SIGPIPE, SIG_IGN);
   SSL_library_init();       /* load encryption & hash algorithms for SSL */
   SSL_load_error_strings(); /* load the error strings for good error reporting
                              */
@@ -445,6 +448,8 @@ int main(int mama, char **moo) {
 
     char *data;
 
+    int SSL_err = 0;
+
     while (1) {
       memset(rbuf, '\0', sizeof(rbuf));
       int readReturn = 0;
@@ -455,7 +460,9 @@ int main(int mama, char **moo) {
       }
       pb("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
       if (readReturn <= 0) {
-        pb("error: %d %d\n", SSL_get_error(ssl, readReturn), errno);
+        SSL_err = SSL_get_error(ssl, readReturn);
+        pb("error: %d %d\n", SSL_err, errno);
+        pb("%d %d %d\n", SSL_err, SSL_ERROR_SYSCALL, SSL_ERROR_SSL);
         break;
       } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
         sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_TOO_LONG);
@@ -634,7 +641,8 @@ int main(int mama, char **moo) {
             bdestroy(recipientkey);
             bdestroy(recipientvalue);
             bstrListDestroy(lines);
-            connection = 2;
+            if (r != -2) 
+              connection = 2;
             goto cleanup;
           }
 
@@ -651,6 +659,7 @@ int main(int mama, char **moo) {
           };
           bdestroy(certKey);
           bdestroy(certValue);
+          pb("\n\n===%s===\n\n", certData->data)
           sendGood(ssl, 2, certData->data, code);
           bdestroy(certData);
         } else if (action == 2 && bstrccmp(path, "/sendmsg") == 0) {
@@ -693,7 +702,8 @@ int main(int mama, char **moo) {
             bdestroy(messagekey);
             bdestroy(messagevalue);
             bstrListDestroy(lines);
-            connection = 2;
+            if (r != -2) 
+              connection = 2;
             goto cleanup;
           }
 
@@ -772,7 +782,9 @@ int main(int mama, char **moo) {
       }
     }
 
-    SSL_shutdown(ssl);
+    pb("%d %d %d\n", SSL_err, SSL_ERROR_SYSCALL, SSL_ERROR_SSL);
+    if (SSL_err != SSL_ERROR_SYSCALL && SSL_err != SSL_ERROR_SSL) 
+      SSL_shutdown(ssl);
     SSL_free(ssl);
     close(client);
     if (DEBUG && strcmp(vl.version, "die") == 0) break;

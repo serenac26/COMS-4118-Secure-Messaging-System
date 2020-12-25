@@ -260,7 +260,7 @@ int main(int argc, char *argv[]) {
       continue;
     }
     i++;
-    // fprintf(stdout, "recipient: %s\n", (char *)r->data);
+    fprintf(stdout, "recipient: %s\n", (char *)r->data);
 
     char gucheader[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n",
                             BOROMAIL_PORT, GETUSERCERT)+1];
@@ -273,13 +273,13 @@ int main(int argc, char *argv[]) {
                              strlen(gucrecipientLine))+1];
     sprintf(gucheader3, "content-length: %ld\n", strlen(gucrecipientLine));
 
-    // printf("=======\n");
-    // printf("%s", gucheader);
-    // printf("%s", gucheader2);
-    // printf("%s", gucheader3);
-    // printf("%s", "\n");
-    // printf("%s", gucrecipientLine);
-    // printf("=======\n");
+    printf("=======\n");
+    printf("%s", gucheader);
+    printf("%s", gucheader2);
+    printf("%s", gucheader3);
+    printf("%s", "\n");
+    printf("%s", gucrecipientLine);
+    printf("=======\n");
 
     SSL_write(ssl, gucheader, strlen(gucheader));
     SSL_write(ssl, gucheader2, strlen(gucheader2));
@@ -308,83 +308,77 @@ int main(int argc, char *argv[]) {
       continue;
     }
     code[sizeof(code) - 1] = '\0';
-    int state = 0;
-    if (strstr(code, "200") != NULL) {
-      while (1) {
-        state = 1;
-        char buf[2];
-        readReturn = SSL_read(ssl, buf, 1);
-        buf[1] = '\0';
-        if (SSL_pending(ssl) == 0) {
-          break;
-        }
-        sprintf(response + strlen(response), "%s", buf);
+    while (1) {
+      char buf[2];
+      readReturn = SSL_read(ssl, buf, 1);
+      buf[1] = '\0';
+      if (SSL_pending(ssl) == 0) {
+        break;
       }
-    } else if (strstr(code, "-2") != NULL) {
-      fprintf(stderr, "Error: Invalid Recipient\n");
-      remove(r_certfile);
-      free(response);
-      response = NULL;
-      curr = curr->next;
-      continue;
-    } else if (strstr(code, "-3") != NULL) {
-      fprintf(stderr, "Error: Could not retrieve certificate\n");
-      remove(r_certfile);
-      free(response);
-      response = NULL;
-      curr = curr->next;
-      continue;
+      sprintf(response + strlen(response), "%s", buf);
     }
+    if ((strstr(code, "200") == NULL) || (response == NULL)) {
+      if (strstr(code, "-2") != NULL) {
+        fprintf(stderr, "Error: Invalid Recipient\n");
+      } else if (strstr(code, "-3") != NULL) {
+        fprintf(stderr, "Error: Could not retrieve certificate\n");
+      }
+      remove(r_certfile);
+      free(response);
+      response = NULL;
+      curr = curr->next;
+      continue;
+    } 
+
+    printf("%s\n", response);
     
-    if ((state == 1) && (response != NULL)) {
-      bstring bresponse = bfromcstr(response);
-      struct bstrList *lines = bsplit(bresponse, '\n');
-      bstring bkey = bfromcstr("");
-      bstring bvalue = bfromcstr("");
-      if (0 != deserializeData(bkey, bvalue, lines->entry[4], 1)) {
-        remove(r_certfile);
-        free(response);
-        response = NULL;
-        bdestroy(bresponse);
-        bdestroy(bkey);
-        bdestroy(bvalue);
-        bstrListDestroy(lines);
-        curr = curr->next;
-        continue;
-      }
-      if (0 != bstrccmp(bkey, "certificate")) {
-        remove(r_certfile);
-        free(response);
-        response = NULL;
-        bdestroy(bresponse);
-        bdestroy(bkey);
-        bdestroy(bvalue);
-        bstrListDestroy(lines);
-        curr = curr->next;
-        continue;
-      }
-      fp = fopen(r_certfile, "w");
-      if (!fp) {
-        remove(r_certfile);
-        free(response);
-        response = NULL;
-        bdestroy(bresponse);
-        bdestroy(bkey);
-        bdestroy(bvalue);
-        bstrListDestroy(lines);
-        curr = curr->next;
-        continue;
-      }
-      fputs((char *)bvalue->data, fp);
-      fclose(fp);
-      fp = NULL;
+    bstring bresponse = bfromcstr(response);
+    struct bstrList *lines = bsplit(bresponse, '\n');
+    bstring bkey = bfromcstr("");
+    bstring bvalue = bfromcstr("");
+    if (0 != deserializeData(bkey, bvalue, lines->entry[4], 1)) {
+      remove(r_certfile);
       free(response);
       response = NULL;
       bdestroy(bresponse);
       bdestroy(bkey);
       bdestroy(bvalue);
       bstrListDestroy(lines);
+      curr = curr->next;
+      continue;
     }
+    if (0 != bstrccmp(bkey, "certificate")) {
+      remove(r_certfile);
+      free(response);
+      response = NULL;
+      bdestroy(bresponse);
+      bdestroy(bkey);
+      bdestroy(bvalue);
+      bstrListDestroy(lines);
+      curr = curr->next;
+      continue;
+    }
+    fp = fopen(r_certfile, "w");
+    if (!fp) {
+      remove(r_certfile);
+      free(response);
+      response = NULL;
+      bdestroy(bresponse);
+      bdestroy(bkey);
+      bdestroy(bvalue);
+      bstrListDestroy(lines);
+      curr = curr->next;
+      continue;
+    }
+    fputs((char *)bvalue->data, fp);
+    fclose(fp);
+    fp = NULL;
+    free(response);
+    response = NULL;
+    bdestroy(bresponse);
+    bdestroy(bkey);
+    bdestroy(bvalue);
+    bstrListDestroy(lines);
 
     // Encrypt the message with recipient cert and write to temp file
     // unsigned.encrypted.msg
@@ -481,20 +475,48 @@ int main(int argc, char *argv[]) {
     bdestroy(bsmessagevalue);
 
     // Parse response
+    response = (char *)malloc(MB);
+    if (!response) {
+      remove(r_certfile);
+      curr = curr->next;
+      free(response);
+      response = NULL;
+      continue;
+    }
+    *response = '\0';
     char codesm[4];
     readReturn = SSL_peek(ssl, codesm, sizeof(codesm) - 1);
     if (readReturn == 0) {
-      break;
+      remove(r_certfile);
+      curr = curr->next;
+      free(response);
+      response = NULL;
+      continue;
     }
     codesm[sizeof(codesm) - 1] = '\0';
-    if (strstr(codesm, "200") != NULL) {
+    while (1) {
+      char buf[2];
+      readReturn = SSL_read(ssl, buf, 1);
+      buf[1] = '\0';
+      if (SSL_pending(ssl) == 0) {
+        break;
+      }
+      sprintf(response + strlen(response), "%s", buf);
+    }
+    if ((strstr(codesm, "200") == NULL) || (response == NULL)) {
+      if (strstr(codesm, "-3") != NULL) {
+        fprintf(stderr, "Error: Could not send message\n");   
+      } else if (strstr(codesm, "-4") != NULL) {
+        fprintf(stderr, "Error: Mailbox Full\n");  
+      }
+    } else {
       sent++;
-    } else if (strstr(codesm, "-3") != NULL) {
-      fprintf(stderr, "Error: Could not send message\n");      
-    } else if (strstr(codesm, "-4") != NULL) {
-      fprintf(stderr, "Error: Mailbox Full\n");      
-    } 
+    }
 
+    printf("%s\n", response);
+
+    free(response);
+    response = NULL;
     free(buffer);
     buffer = NULL;
     curr = curr->next;
