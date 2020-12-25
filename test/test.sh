@@ -45,7 +45,7 @@ testfunctionality1 () {
 
     echo "$A and $B generate private keys and certificates"
     ./genkey.sh $keyA $keypass
-    echo "use login password from $tmp/creds.txt"
+    echo "use login password from tmp/creds.txt"
     echo "use key password: pass"
     ./getcert $A $keyA $certA
     # expect $pwprompt
@@ -53,7 +53,7 @@ testfunctionality1 () {
 
     ./genkey.sh $keyB $keypass
     ./getcert $B $keyB $certB
-    echo "use login password from $tmp/creds.txt"
+    echo "use login password from tmp/creds.txt"
     echo "use key password: pass"
     # expect $pwprompt
     # send -- "$pass\r"
@@ -102,7 +102,7 @@ testfunctionality2 () {
 
     echo "$A generates new private key and changes password to get a new certificate"
     ./genkey.sh $keyA.new $keypass
-    echo "use login password from $tmp/creds.txt"
+    echo "use login password from tmp/creds.txt"
     echo "use new login password: newpass"
     echo "use key password: pass"
     ./changepw $A $keyA.new $certA.new
@@ -114,7 +114,7 @@ testfunctionality2 () {
     echo "___________________________________________________________________________"
 
     echo "$A tries to login with old pw; # expect login failure"
-    echo "try old login password from $tmp/creds.txt"
+    echo "try old login password from tmp/creds.txt"
     echo "use key password: pass"
     ./getcert $A $keyA $tmp/blah
     # expect $pwprompt
@@ -268,7 +268,7 @@ testfunctionality4 () {
     fi
 
     echo "$B tries to change password; # expect pending messages failure"
-    echo "use old login password from $tmp/creds.txt"
+    echo "use old login password from tmp/creds.txt"
     echo "use new login password: newpass"
     echo "use key password: pass"
     ./changepw $B $keyB $tmp/blah
@@ -424,7 +424,7 @@ testimpersonation () {
 
     echo "$C generates a private key and gets a certificate"
     ./genkey.sh $keyC $keypass
-    echo "use login password from $tmp/creds.txt"
+    echo "use login password from tmp/creds.txt"
     echo "use key password: pass"
     ./getcert $C $keyC $certC
     # expect $pwprompt
