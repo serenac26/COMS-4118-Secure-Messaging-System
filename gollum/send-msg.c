@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
   char *unsigned_encrypted_file = UNSIGNED_ENCRYPTED_MSG;
   char *signed_encrypted_file = SIGNED_ENCRYPTED_MSG;
 
-  if (argc != 4) {
+  if (argc != 4 || !(validArg(argv[1]) && validArg(argv[2]) && validArg(argv[3]))) {
     fprintf(stderr,
             "bad arg count; usage: send-msg <cert-file> <key-file> "
             "<msg-in-file>\n");

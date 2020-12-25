@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <regex.h>
 #include "bstrlib.h"
 #include "utf8util.h"
 #include "buniutil.h"
@@ -34,6 +35,8 @@
 
 #define GB 1000000000
 #define MB 1000000
+
+#define ARG_REGEX "^[a-z0-9\\+\\-_\\./]+$"
 
 #define p(...)           \
   if (DEBUG)             \
@@ -70,5 +73,7 @@ void decodeMessage(bstring message);
 int serializeData(bstring key, bstring value, bstring result, int encode);
 
 int deserializeData(bstring key, bstring value, bstring result, int decode);
+
+int validArg(char *datastr);
 
 #endif

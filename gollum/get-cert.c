@@ -42,19 +42,21 @@ int create_socket(int port) {
   return s;
 }
 
-//./get-cert <username> <privatekeyfile>
+//./get-cert <username> <privatekeyfile> <certout>
 int main(int argc, char *argv[]) {
-  if (argc != 3) {
-    fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file>\n");
+  if (argc != 4 || !(validArg(argv[1]) && validArg(argv[2]) && validArg(argv[3]))) {
+    fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file> <cert-out-file>\n");
   }
   char *username = argv[1];
+  char *privatekeyfile = argv[2];
+  char *writePath = argv[3];
+  
   char *password = getpass("Enter password: ");
 
   if ((strlen(username) > 32) || (strlen(password) > 32)) {
     printf("input too large: must be <=32 characters\n");
   }
 
-  char *privatekeyfile = argv[2];
   struct stat filestatus;
   if (stat(privatekeyfile, &filestatus) != 0) {
     fprintf(stderr, "Private key file does not exist\n");
@@ -192,7 +194,6 @@ int main(int argc, char *argv[]) {
   // printf("Enter a path for cert: \n");
   bstring certif = bfromcstr("");
   int state = 0;
-  char writePath[100];
   char *resultCertif = '\0';
   while (1) {
 		char ibuf[1000];
@@ -207,13 +208,9 @@ int main(int argc, char *argv[]) {
       break;
     }
     if ((strstr(ibuf, "200") == ibuf) && (state == 0)) {
-      printf("Enter a path to write the certificate: \n");
-      scanf("%s", writePath);
       state = 1;
     } else if ((strstr(ibuf, "201") == ibuf) && (state == 0)) {
       printf("Warning: Certificate exists already! To update your private key, please use changepw.\n");
-      printf("Enter a path to write the certificate: \n");
-      scanf("%s", writePath);
       state = 1;
     } else if ((strstr(ibuf, "-1")  == ibuf) && (state == 0)) {
       printf("Error: Bad Username\n");
@@ -243,7 +240,7 @@ int main(int argc, char *argv[]) {
     deserializeData(bkey1, bvalue1, certif, 1);
     resultCertif = bvalue1->data;
     FILE *fp;
-    fp = fopen(writePath, "w+");
+    fp = fopen(writePath, "w");
     if (!fp) {
       fprintf(stderr, "File write error\n");
     } else {

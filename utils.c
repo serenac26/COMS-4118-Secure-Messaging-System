@@ -191,3 +191,21 @@ int deserializeData(bstring key, bstring value, bstring input, int decode) {
   bstrListDestroy(mamamoo);
   return 0;
 }
+
+/*
+ * Matches string to ARG regex expression and limit to 100 characters
+ * ===
+ * 1  invalid data line
+ * 0  success
+ */
+int validArg(char *datastr) {
+  if (strlen(datastr) > 100)
+    return 0;
+  regex_t reg;
+  int value = regcomp(&reg, ARG_REGEX, REG_EXTENDED | REG_ICASE);
+  if (value != 0)
+    fprintf(stderr, "Regex did not compile successfully.\n");
+  int r = regexec(&reg, datastr, 0, NULL, 0);
+  regfree(&reg);
+  return r != REG_NOMATCH;
+}
