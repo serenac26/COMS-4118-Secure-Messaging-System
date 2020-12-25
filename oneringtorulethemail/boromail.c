@@ -715,7 +715,7 @@ int main(int mama, char **moo) {
           free(_subject);
 
           struct bstrList *lines = bsplit(bdata, '\n');
-          if (lines->qty != 1) {
+          if (lines->qty != 2) {
             SSL_write(ssl, ERR_MALFORMED_REQUEST,
                       strlen(ERR_MALFORMED_REQUEST));
             bstrListDestroy(lines);

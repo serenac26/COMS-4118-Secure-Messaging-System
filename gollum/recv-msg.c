@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
   char rmheader[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, RECEIVEMESSAGE)];
   sprintf(rmheader, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, RECEIVEMESSAGE);
   char *rmheader2 = "connection: keep-alive\n";
-  char *rmheader3 = "content-length: 0\n";
+  char *rmheader3 = "content-length: 1\n";
   
   SSL_write(ssl, rmheader, strlen(rmheader));
   SSL_write(ssl, rmheader2, strlen(rmheader2));
@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
     char buf[2];
     readReturn = SSL_read(ssl, buf, 1);
     buf[1] = '\0';
-    if (readReturn == 0) {
+    if (SSL_pending(ssl) == 0) {
       break;
     }
     sprintf(response+strlen(response), "%s", buf);
@@ -351,7 +351,7 @@ int main(int argc, char *argv[]) {
       char buf[2];
       readReturn = SSL_read(ssl, buf, 1);
       buf[1] = '\0';
-      if (readReturn == 0) {
+      if (SSL_pending(ssl) == 0) {
         break;
       }
       sprintf(response+strlen(response), "%s", buf);

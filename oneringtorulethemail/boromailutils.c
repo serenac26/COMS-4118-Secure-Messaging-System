@@ -86,7 +86,7 @@ int recvmessage(bstring msgfile, char** msgout) {
         perror("Malloc error");
         return -1;
     }
-    *msgout = '\0';
+    **msgout = '\0';
     while (0 < getline(&line, &size, fp)) {
         strncat(*msgout, line, size);
     }
