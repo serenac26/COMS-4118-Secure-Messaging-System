@@ -27,7 +27,7 @@
 #define SIGNED_ENCRYPTED_MSG "../tmp/signed.encrypted.msg"
 
 #define GETUSERCERT "getusercert"
-#define SENDMESSAGE "sendmessage"
+#define SENDMESSAGE "sendmsg"
 
 #define RCPTTO_REGEX "^\\.?rcpt to:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
 #define MAILFROM_REGEX "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
@@ -40,7 +40,8 @@
 int verify_callback(int ok, X509_STORE_CTX *ctx) {
   /* Tolerate certificate expiration */
   if (!ok) {
-    fprintf(stderr, "verify callback error: %d\n", X509_STORE_CTX_get_error(ctx));
+    fprintf(stderr, "verify callback error: %d\n",
+            X509_STORE_CTX_get_error(ctx));
   }
   /* Otherwise don't override */
   return ok;
@@ -74,6 +75,7 @@ int main(int argc, char *argv[]) {
   char *certfile, *keyfile, *msginfile, *buffer, *response;
   char *line = NULL;
   size_t size = 0;
+  int sent = 0;
   FILE *fp;
   char *r_certfile = RECIPIENT_CERTIFICATE;
   char *unsigned_encrypted_file = UNSIGNED_ENCRYPTED_MSG;
@@ -114,20 +116,18 @@ int main(int argc, char *argv[]) {
     ERR_print_errors_fp(stderr);
     exit(EXIT_FAILURE);
   }
-  
 
   if (SSL_CTX_load_verify_locations(ctx, CA_CHAIN, NULL) != 1) {
     ERR_print_errors_fp(stderr);
     exit(EXIT_FAILURE);
   }
-  
 
   SSL_CTX_set_verify(ctx,
                      SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT |
                          SSL_VERIFY_CLIENT_ONCE,
                      verify_callback);
   /* Set the verification depth to 1 */
-  
+
   SSL_CTX_set_verify_depth(ctx, 1);
 
   int sock = create_socket(6969);
@@ -135,7 +135,6 @@ int main(int argc, char *argv[]) {
   SSL *ssl = SSL_new(ctx);
 
   SSL_set_fd(ssl, sock);
-  
 
   if (SSL_connect(ssl) <= 0) {
     ERR_print_errors_fp(stderr);
@@ -150,9 +149,6 @@ int main(int argc, char *argv[]) {
 
   memset(rbuf, '\0', sizeof(rbuf));
   memset(wbuf, '\0', sizeof(wbuf));
-  
-
-
 
   // Read in message from file (limit size to 1 MB)
   if (!(stat(msginfile, &st) == 0 && S_ISREG(st.st_mode) && st.st_size < MB)) {
@@ -260,34 +256,42 @@ int main(int argc, char *argv[]) {
     // Send recipient name to server /getusercert
     bstring r = curr->str;
     if (r == NULL) {
-      bdestroy(r);
       curr = curr->next;
       continue;
     }
     i++;
     // fprintf(stdout, "recipient: %s\n", (char *)r->data);
-    
-    char gucheader[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, GETUSERCERT)];
-    sprintf(gucheader, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, GETUSERCERT);
+
+    char gucheader[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n",
+                            BOROMAIL_PORT, GETUSERCERT)+1];
+    sprintf(gucheader, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT,
+            GETUSERCERT);
     char *gucheader2 = "connection: keep-alive\n";
-    char gucrecipientLine[snprintf(0, 0, "recipient:%s\n", (char *)r->data)];
+    char gucrecipientLine[snprintf(0, 0, "recipient:%s\n", (char *)r->data)+1];
     sprintf(gucrecipientLine, "recipient:%s\n", (char *)r->data);
-    char gucheader3[snprintf(0, 0, "content-length: %ld\n", strlen(gucrecipientLine))];
+    char gucheader3[snprintf(0, 0, "content-length: %ld\n",
+                             strlen(gucrecipientLine))+1];
     sprintf(gucheader3, "content-length: %ld\n", strlen(gucrecipientLine));
-    
+
+    // printf("=======\n");
+    // printf("%s", gucheader);
+    // printf("%s", gucheader2);
+    // printf("%s", gucheader3);
+    // printf("%s", "\n");
+    // printf("%s", gucrecipientLine);
+    // printf("=======\n");
+
     SSL_write(ssl, gucheader, strlen(gucheader));
     SSL_write(ssl, gucheader2, strlen(gucheader2));
     SSL_write(ssl, gucheader3, strlen(gucheader3));
     SSL_write(ssl, "\n", strlen("\n"));
     SSL_write(ssl, gucrecipientLine, strlen(gucrecipientLine));
-    SSL_write(ssl, "\n", strlen("\n"));
 
-
-    // Server sends back recipient certificate which we write to temp file r_certfile 
+    // Server sends back recipient certificate which we write to temp file
+    // r_certfile
     response = (char *)malloc(MB);
     if (!response) {
       remove(r_certfile);
-      bdestroy(r);
       curr = curr->next;
       free(response);
       response = NULL;
@@ -295,26 +299,26 @@ int main(int argc, char *argv[]) {
     }
     *response = '\0';
     char code[4];
-    int readReturn = SSL_peek(ssl, code, sizeof(code)-1);
+    int readReturn = SSL_peek(ssl, code, sizeof(code) - 1);
     if (readReturn == 0) {
       remove(r_certfile);
-      bdestroy(r);
       curr = curr->next;
       free(response);
       response = NULL;
       continue;
     }
-    code[sizeof(code)-1] = '\0';
+    code[sizeof(code) - 1] = '\0';
     int state = 0;
+
     while ((strstr(code, "200") != NULL)) {
       state = 1;
       char buf[2];
       readReturn = SSL_read(ssl, buf, 1);
       buf[1] = '\0';
-      if (readReturn == 0) {
+      if (SSL_pending(ssl) == 0) {
         break;
       }
-      sprintf(response+strlen(response), "%s", buf);
+      sprintf(response + strlen(response), "%s", buf);
     }
     if ((state == 1) && (response != NULL)) {
       bstring bresponse = bfromcstr(response);
@@ -329,7 +333,6 @@ int main(int argc, char *argv[]) {
         bdestroy(bkey);
         bdestroy(bvalue);
         bstrListDestroy(lines);
-        bdestroy(r);
         curr = curr->next;
         continue;
       }
@@ -341,7 +344,6 @@ int main(int argc, char *argv[]) {
         bdestroy(bkey);
         bdestroy(bvalue);
         bstrListDestroy(lines);
-        bdestroy(r);
         curr = curr->next;
         continue;
       }
@@ -355,16 +357,13 @@ int main(int argc, char *argv[]) {
       bdestroy(bkey);
       bdestroy(bvalue);
       bstrListDestroy(lines);
-      printf("Wrote certificate to: %s\n", r_certfile);
     }
-
 
     // Encrypt the message with recipient cert and write to temp file
     // unsigned.encrypted.msg
     if (0 != encryptmsg(r_certfile, msginfile, unsigned_encrypted_file)) {
       remove(r_certfile);
       remove(unsigned_encrypted_file);
-      bdestroy(r);
       curr = curr->next;
       continue;
     }
@@ -376,7 +375,6 @@ int main(int argc, char *argv[]) {
                      signed_encrypted_file)) {
       remove(unsigned_encrypted_file);
       remove(signed_encrypted_file);
-      bdestroy(r);
       curr = curr->next;
       continue;
     }
@@ -386,7 +384,6 @@ int main(int argc, char *argv[]) {
     buffer = (char *)malloc(MB);
     if (!buffer) {
       remove(signed_encrypted_file);
-      bdestroy(r);
       curr = curr->next;
       continue;
     }
@@ -397,7 +394,6 @@ int main(int argc, char *argv[]) {
       remove(signed_encrypted_file);
       free(buffer);
       buffer = NULL;
-      bdestroy(r);
       curr = curr->next;
       continue;
     }
@@ -410,27 +406,40 @@ int main(int argc, char *argv[]) {
     fp = NULL;
     remove(signed_encrypted_file);
 
-
     // Send the signed message to the server /sendmsg
-    char smheader[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, SENDMESSAGE)];
-    sprintf(smheader, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, SENDMESSAGE);
+    char smheader[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n",
+                           BOROMAIL_PORT, SENDMESSAGE)+1];
+    sprintf(smheader, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT,
+            SENDMESSAGE);
     char *smheader2 = "connection: keep-alive\n";
-    char smrecipientLine[snprintf(0, 0, "recipient:%s\n", (char *)r->data)];
+    char smrecipientLine[snprintf(0, 0, "recipient:%s\n", (char *)r->data)+1];
     sprintf(smrecipientLine, "recipient:%s\n", (char *)r->data);
-    char *smmessageLine = (char *)malloc(snprintf(0, 0, "message:%s\n", buffer));
+    char *smmessageLine = (char *)malloc(MB);
     if (!smmessageLine) {
       fprintf(stderr, "Malloc failed.\n");
       free(buffer);
       buffer = NULL;
-      bdestroy(r);
       curr = curr->next;
       continue;
     }
-    sprintf(smmessageLine, "message:%s\n", buffer);
-    char smheader3[snprintf(0, 0, "content-length: %ld\n", strlen(smrecipientLine) + strlen(smmessageLine))];
-    sprintf(smheader3, "content-length: %ld\n", strlen(smrecipientLine) + strlen(smmessageLine));
-    
-    fprintf(stdout, "%s%s%s%s%smessage-length: %ld\n%s", smheader, smheader2, smheader3, "\n", smrecipientLine, strlen(smmessageLine), "\n");
+    bstring bsmessage = bfromcstr("");
+    bstring bsmessagekey = bfromcstr("message");
+    bstring bsmessagevalue = bfromcstr(buffer);
+    serializeData(bsmessagekey, bsmessagevalue, bsmessage, 1);
+    sprintf(smmessageLine, "%s\n", bsmessage->data);
+    char smheader3[snprintf(0, 0, "content-length: %ld\n",
+                            strlen(smrecipientLine) + strlen(smmessageLine))+1];
+    sprintf(smheader3, "content-length: %ld\n",
+            strlen(smrecipientLine) + strlen(smmessageLine));
+
+    // fprintf(stdout, "%s%s%s%s%smessage-length: %ld\n%s", smheader, smheader2,
+    // smheader3, "\n", smrecipientLine, strlen(smmessageLine), "\n");
+    // printf("%s", smheader);
+    // printf("%s", smheader2);
+    // printf("%s", smheader3);
+    // printf("%s", "\n");
+    // printf("%s", smrecipientLine);
+    // printf("%s", smmessageLine);
 
     SSL_write(ssl, smheader, strlen(smheader));
     SSL_write(ssl, smheader2, strlen(smheader2));
@@ -438,31 +447,54 @@ int main(int argc, char *argv[]) {
     SSL_write(ssl, "\n", strlen("\n"));
     SSL_write(ssl, smrecipientLine, strlen(smrecipientLine));
     SSL_write(ssl, smmessageLine, strlen(smmessageLine));
-    SSL_write(ssl, "\n", strlen("\n"));
 
+    free(smmessageLine);
+    bdestroy(bsmessage);
+    bdestroy(bsmessagekey);
+    bdestroy(bsmessagevalue);
 
     // Parse response
     char codesm[4];
-    readReturn = SSL_peek(ssl, code, sizeof(code)-1);
+    readReturn = SSL_peek(ssl, codesm, sizeof(codesm) - 1);
     if (readReturn == 0) {
       break;
     }
-    codesm[sizeof(codesm)-1] = '\0';
+    codesm[sizeof(codesm) - 1] = '\0';
     if (strstr(codesm, "200") == NULL) {
-      fprintf(stderr, "Could not send message to recipient: %s\n.", (char *)r->data);
+      fprintf(stderr, "Could not send message to recipient: %s\n.",
+              (char *)r->data);
+    } else {
+      sent++;
     }
 
     free(buffer);
     buffer = NULL;
-    bdestroy(r);
     curr = curr->next;
   }
 
+  if (sent > 0) {
+    printf("Success: message successfully to %d mailbox(es).\n", sent);
+  } else {
+    printf("Error: message was not successfully sent to any mailboxes.\n");
+  }
   freeList(rcpts);
+  close(sock);
+  SSL_shutdown(ssl);
+  SSL_free(ssl);
+  SSL_CTX_free(ctx);
+  EVP_cleanup();
+  return 0;
 
 cleanup:
+  if (sent > 0) {
+    printf("Partial error: message successfully to %d mailbox(es).\n", sent);
+  } else {
+    printf("Error: message was not successfully sent to any mailboxes.\n");
+  }
   // Cleanup at the end
   close(sock);
+  SSL_shutdown(ssl);
+  SSL_free(ssl);
   SSL_CTX_free(ctx);
   EVP_cleanup();
   return 0;

@@ -29,6 +29,8 @@
   "Connection must be either close or keep-alive\n"
 #define ERR_INSUFFICIENT_CONTENT_SENT \
   "Send more content you stingy fuck nOoo~ you're so sexy aha 😘\n"
+#define ERR_ABUNDANT_CONTENT_SENT \
+  "Send less content you liberal fuck nOoo~ you're so sexy aha 😘\n"
 #define ERR_MALFORMED_REQUEST "Your request body was malformed\n"
 
 #define ERR_NO_MSG (-1)
@@ -181,7 +183,7 @@ int parseSubject(char *data, bstring result) {
   regex_t reg;
   int value;
 
-  value = regcomp(&reg, "/C=US/ST=NY/O=.*/OU=client_.*/CN=(.*)/",
+  value = regcomp(&reg, ".*/CN=(.*)",
                   REG_EXTENDED | REG_ICASE);
   if (value != 0) {
     pb("Regex did not compile successfully\n");
@@ -541,6 +543,10 @@ int main(int mama, char **moo) {
           SSL_write(ssl, ERR_INSUFFICIENT_CONTENT_SENT,
                     strlen(ERR_INSUFFICIENT_CONTENT_SENT));
           break;
+        } else if (contentReceived > contentLength) {
+          SSL_write(ssl, ERR_ABUNDANT_CONTENT_SENT,
+                    strlen(ERR_ABUNDANT_CONTENT_SENT));
+          break;
         }
 
         data[contentLength] = '\0';
@@ -664,7 +670,7 @@ int main(int mama, char **moo) {
 
           if (deserializeData(recipientkey, recipientvalue, lines->entry[0],
                               0) != 0 ||
-              deserializeData(messagekey, messagevalue, lines->entry[1], 0) !=
+              deserializeData(messagekey, messagevalue, lines->entry[1], 1) !=
                   0 ||
               bstrccmp(recipientkey, "recipient") != 0 ||
               bstrccmp(messagekey, "message") != 0) {
@@ -698,7 +704,7 @@ int main(int mama, char **moo) {
           X509_NAME *certname = X509_get_subject_name(cert);
           char *_subject = X509_NAME_oneline(certname, NULL, 0);
 
-          bstring recipient = NULL;
+          bstring recipient = bfromcstr("");
           if (parseSubject(_subject, recipient) != 0) {
             SSL_write(ssl, ERR_MALFORMED_REQUEST,
                       strlen(ERR_MALFORMED_REQUEST));

@@ -29,6 +29,8 @@
   "Connection must be either close or keep-alive\n"
 #define ERR_INSUFFICIENT_CONTENT_SENT \
   "Send more content you stingy fuck nOoo~ you're so sexy aha 😘\n"
+#define ERR_ABUNDANT_CONTENT_SENT \
+  "Send less content you liberal fuck nOoo~ you're so sexy aha 😘\n"
 #define ERR_MALFORMED_REQUEST "Your request body was malformed\n"
 
 #define ERR_BAD_USERNAME (-1)
@@ -309,12 +311,11 @@ void sendBad(SSL *ssl, void *content) {
   bdestroy(toSend);
 }
 
-int pw_cb(char *buf, int size, int rwflag, void *u)
- {
-     strncpy(buf, (char *)u, size);
-     buf[size - 1] = '\0';
-     return strlen(buf);
- }
+int pw_cb(char *buf, int size, int rwflag, void *u) {
+  strncpy(buf, (char *)u, size);
+  buf[size - 1] = '\0';
+  return strlen(buf);
+}
 
 // Refer to:
 // http://h30266.www3.hpe.com/odl/axpos/opsys/vmsos84/BA554_90007/ch04s03.html
@@ -524,6 +525,10 @@ int main(int mama, char **moo) {
         if (contentReceived < contentLength) {
           SSL_write(ssl, ERR_INSUFFICIENT_CONTENT_SENT,
                     strlen(ERR_INSUFFICIENT_CONTENT_SENT));
+          break;
+        } else if (contentReceived > contentLength) {
+          SSL_write(ssl, ERR_ABUNDANT_CONTENT_SENT,
+                    strlen(ERR_ABUNDANT_CONTENT_SENT));
           break;
         }
 
