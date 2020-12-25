@@ -290,7 +290,8 @@ int main(int argc, char *argv[]) {
     // r_certfile
     response = (char *)malloc(MB);
     if (!response) {
-      remove(r_certfile);curr = curr->next;
+      remove(r_certfile);
+        curr = curr->next;
       free(response);
       response = NULL;
       continue;
@@ -299,7 +300,8 @@ int main(int argc, char *argv[]) {
     char code[4];
     int readReturn = SSL_peek(ssl, code, sizeof(code) - 1);
     if (readReturn == 0) {
-      remove(r_certfile);curr = curr->next;
+      remove(r_certfile);
+        curr = curr->next;
       free(response);
       response = NULL;
       continue;
@@ -329,7 +331,8 @@ int main(int argc, char *argv[]) {
         bdestroy(bresponse);
         bdestroy(bkey);
         bdestroy(bvalue);
-        bstrListDestroy(lines);curr = curr->next;
+        bstrListDestroy(lines);
+        curr = curr->next;
         continue;
       }
       if (0 != bstrccmp(bkey, "certificate")) {
@@ -339,7 +342,8 @@ int main(int argc, char *argv[]) {
         bdestroy(bresponse);
         bdestroy(bkey);
         bdestroy(bvalue);
-        bstrListDestroy(lines);curr = curr->next;
+        bstrListDestroy(lines);
+        curr = curr->next;
         continue;
       }
       fp = fopen(r_certfile, "w");
@@ -358,7 +362,8 @@ int main(int argc, char *argv[]) {
     // unsigned.encrypted.msg
     if (0 != encryptmsg(r_certfile, msginfile, unsigned_encrypted_file)) {
       remove(r_certfile);
-      remove(unsigned_encrypted_file);curr = curr->next;
+      remove(unsigned_encrypted_file);
+        curr = curr->next;
       continue;
     }
     remove(r_certfile);
@@ -368,7 +373,8 @@ int main(int argc, char *argv[]) {
     if (0 != signmsg(certfile, keyfile, unsigned_encrypted_file,
                      signed_encrypted_file)) {
       remove(unsigned_encrypted_file);
-      remove(signed_encrypted_file);curr = curr->next;
+      remove(signed_encrypted_file);
+        curr = curr->next;
       continue;
     }
     remove(unsigned_encrypted_file);
@@ -376,7 +382,8 @@ int main(int argc, char *argv[]) {
     // Read the signed, encrypted message into buffer
     buffer = (char *)malloc(MB);
     if (!buffer) {
-      remove(signed_encrypted_file);curr = curr->next;
+      remove(signed_encrypted_file);
+        curr = curr->next;
       continue;
     }
     *buffer = '\0';
@@ -385,7 +392,8 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "File open error: %s\n", signed_encrypted_file);
       remove(signed_encrypted_file);
       free(buffer);
-      buffer = NULL;curr = curr->next;
+      buffer = NULL;
+        curr = curr->next;
       continue;
     }
     while (0 < getline(&line, &size, fp)) {
@@ -409,7 +417,8 @@ int main(int argc, char *argv[]) {
     if (!smmessageLine) {
       fprintf(stderr, "Malloc failed.\n");
       free(buffer);
-      buffer = NULL;curr = curr->next;
+      buffer = NULL;
+        curr = curr->next;
       continue;
     }
     bstring bsmessage = bfromcstr("");
