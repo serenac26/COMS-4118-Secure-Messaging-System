@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 
   if (argc != 4 || !(validArg(argv[1]) && validArg(argv[2]) && validArg(argv[3]))) {
     fprintf(stderr,
-            "bad arg count; usage: send-msg <cert-file> <key-file> "
+            "bad arguments; usage: send-msg <cert-file> <key-file> "
             "<msg-in-file>\n");
     return 1;
   }
