@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
   char *signed_encrypted_file = SIGNED_ENCRYPTED_MSG;
   char *verified_encrypted_file = VERIFIED_ENCRYPTED_MSG;
 
-  if (argc != 4) {
+  if (argc != 4 || !(validArg(argv[1]) && validArg(argv[2]) && validArg(argv[3]))) {
     fprintf(stderr, "bad arg count; usage: recv-msg <cert-file> <key-file> <msg-out-file>\n");
     return 1;
   }

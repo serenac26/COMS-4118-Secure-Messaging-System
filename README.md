@@ -56,7 +56,7 @@ If you are missing libssl-dev ```fatal error: openssl/ssl.h: No such file or dir
 Please make sure `libcrypt` and `libcrypto` are installed as well.
 
 ## Design Documentation
-z### Assumptions
+### Assumptions
 * Attackers cannot sudo
 * Mailbox directories are secured via permissions such that the contents (i.e. messages) cannot be tampered with, therefore no HMAC integrity checking is needed
 * All users must log in once to generate certificates before being able to receive messages
