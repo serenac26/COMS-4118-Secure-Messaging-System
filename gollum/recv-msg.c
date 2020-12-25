@@ -193,18 +193,32 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   code[sizeof(code)-1] = '\0';
-  printf("Code: %s\n", code);
   int state = 0;
-  while ((strstr(code, "200") != NULL)) {
-    state = 1;
-    char buf[2];
-    readReturn = SSL_read(ssl, buf, 1);
-    buf[1] = '\0';
-    if (SSL_pending(ssl) == 0) {
-      break;
+  if (strstr(code, "200") != NULL) {
+    while (1) {
+      state = 1;
+      char buf[2];
+      readReturn = SSL_read(ssl, buf, 1);
+      buf[1] = '\0';
+      if (SSL_pending(ssl) == 0) {
+        break;
+      }
+      sprintf(response+strlen(response), "%s", buf);
     }
-    sprintf(response+strlen(response), "%s", buf);
+  } else if (strstr(code, "-3") != NULL) {
+    fprintf(stderr, "Error: Could not receive message\n");      
+    free(response);
+    response = NULL;
+    cleanup;
+    return -1;
+  } else if (strstr(code, "-1") != NULL) {
+    fprintf(stderr, "Error: No Messages\n");
+    free(response);
+    response = NULL;
+    cleanup;
+    return -1;
   }
+  printf("%s\n", response);
   if ((state == 1) && (response != NULL)) {
     bstring bresponse = bfromcstr(response);
     struct bstrList *lines = bsplit(bresponse, '\n');
@@ -373,15 +387,31 @@ int main(int argc, char *argv[]) {
   }
   code2[sizeof(code2)-1] = '\0';
   state = 0;
-  while ((strstr(code2, "200") != NULL)) {
-    state = 1;
-    char buf[2];
-    readReturn = SSL_read(ssl, buf, 1);
-    buf[1] = '\0';
-    if (SSL_pending(ssl) == 0) {
-      break;
+  if (strstr(code2, "200") != NULL) {
+    while (1) {
+      state = 1;
+      char buf[2];
+      readReturn = SSL_read(ssl, buf, 1);
+      buf[1] = '\0';
+      if (readReturn == 0) {
+        break;
+      }
+      sprintf(response+strlen(response), "%s", buf);
     }
-    sprintf(response+strlen(response), "%s", buf);
+  } else if (strstr(code, "-2") != NULL) {
+    fprintf(stderr, "Error: Invalid Sender\n");
+    remove(s_certfile);
+    free(response);
+    response = NULL;
+    cleanup;
+    return -1;
+  } else if (strstr(code, "-3") != NULL) {
+    fprintf(stderr, "Error: Could not retrieve certificate\n");
+    remove(s_certfile);
+    free(response);
+    response = NULL;
+    cleanup;
+    return -1;
   }
   if ((state == 1) && (response != NULL)) {
     bstring bresponse = bfromcstr(response);

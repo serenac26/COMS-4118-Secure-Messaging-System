@@ -35,9 +35,15 @@
 #define ERR_MALFORMED_REQUEST "Your request body was malformed\n"
 
 #define ERR_NO_MSG (-1)
-#define ERR_INVALID_RCPT (-2)
+#define ERR_NO_MSG_MSG "No Messages"
+#define ERR_INVALID_USER (-2)
+#define ERR_INVALID_USER_MSG "Invalid User"
 #define ERR_OPEN (-3)
+#define ERR_OPEN_MSG "File/Dir Open"
 #define ERR_MAILBOX_FULL (-4)
+#define ERR_MAILBOX_FULL_MSG "Mailbox Full"
+#define ERR_BAD_REQUEST (400)
+#define ERR_BAD_REQUEST_MSG "Bad Request"
 
 #define KEYPASS "pass"
 
@@ -261,7 +267,7 @@ void testParsers(int mama, char **moo) {
 int handleGetUserCert(char *cert, bstring recipient) {
   int ret = getusercert(cert, recipient);
   if (ret == 1) {
-    return ERR_INVALID_RCPT;
+    return ERR_INVALID_USER;
   } else if (ret == 2) {
     return ERR_OPEN;
   }
@@ -303,9 +309,9 @@ void sendGood(SSL *ssl, int connection, void *content, int code) {
   bdestroy(toSend);
 }
 
-void sendBad(SSL *ssl, void *content) {
+void sendBad(SSL *ssl, int code, char *message, void *content) {
   bstring toSend =
-      bformat("400 Bad Request \nconnection: close\ncontent-length: %d\n\n%s\n",
+      bformat("%d %s \nconnection: close\ncontent-length: %d\n\n%s\n", code, message,
               strlen(content) + 1, content);
   SSL_write(ssl, toSend->data, toSend->slen);
   bdestroy(toSend);
@@ -458,15 +464,15 @@ int main(int mama, char **moo) {
         pb("%d %d %d\n", SSL_err, SSL_ERROR_SYSCALL, SSL_ERROR_SSL);
         break;
       } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
-        sendBad(ssl, ERR_TOO_LONG);
+        sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_TOO_LONG);
         break;
       } else if (state == 0) {
         int result = parseVerbLine(rbuf, &vl);
         if (result == 2) {
-          sendBad(ssl, ERR_TOO_LONG);
+          sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_TOO_LONG);
           break;
         } else if (result == 1) {
-          sendBad(ssl, ERR_INVALID_LINE);
+          sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_INVALID_LINE);
           break;
         } else {
           if (strcmp(vl.verb, "post") == 0)
@@ -480,13 +486,13 @@ int main(int mama, char **moo) {
         int result = parseOptionLine(rbuf, &ol);
 
         if (result == 2) {
-          sendBad(ssl, ERR_TOO_LONG);
+          sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_TOO_LONG);
           break;
         } else if (result == 1) {
           if (strlen(rbuf) == 1 && rbuf[0] == '\n')
             state = 2;
           else {
-            sendBad(ssl, ERR_INVALID_LINE);
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_INVALID_LINE);
             break;
           }
         } else if (strcmp(ol.header, "content-length") == 0) {
@@ -499,7 +505,7 @@ int main(int mama, char **moo) {
           }
 
           if (invalidContentLengthFound) {
-            sendBad(ssl, ERR_INVALID_CONTENT_LENGTH);
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_INVALID_CONTENT_LENGTH);
             break;
           }
 
@@ -512,13 +518,13 @@ int main(int mama, char **moo) {
           else if (strcmp(ol.value, "close") == 0)
             connection = 2;
           else {
-            sendBad(ssl, ERR_INVALID_CONNECTION_VALUE);
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_INVALID_CONNECTION_VALUE);
             break;
           }
         }
       } else if (state == 2) {
         if (contentLength == -1) {
-          sendBad(ssl, ERR_MISSING_CONTENT_LENGTH);
+          sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_MISSING_CONTENT_LENGTH);
           break;
         }
 
@@ -541,11 +547,10 @@ int main(int mama, char **moo) {
         }
 
         if (contentReceived < contentLength) {
-          sendBad(ssl, ERR_INSUFFICIENT_CONTENT_SENT);
+          sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_INSUFFICIENT_CONTENT_SENT);
           break;
         } else if (contentReceived > contentLength) {
-          SSL_write(ssl, ERR_ABUNDANT_CONTENT_SENT,
-                    strlen(ERR_ABUNDANT_CONTENT_SENT));
+          sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_ABUNDANT_CONTENT_SENT);
           break;
         }
 
@@ -606,7 +611,7 @@ int main(int mama, char **moo) {
         if (action == 2 && bstrccmp(path, "/getusercert") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
           if (lines->qty != 2) {
-            sendBad(ssl, ERR_MALFORMED_REQUEST);
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_MALFORMED_REQUEST);
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;
@@ -616,7 +621,7 @@ int main(int mama, char **moo) {
           if (deserializeData(recipientkey, recipientvalue, lines->entry[0],
                               0) != 0 ||
               bstrccmp(recipientkey, "recipient") != 0) {
-            sendBad(ssl, ERR_MALFORMED_REQUEST);
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_MALFORMED_REQUEST);
             bdestroy(recipientkey);
             bdestroy(recipientvalue);
             bstrListDestroy(lines);
@@ -627,9 +632,11 @@ int main(int mama, char **moo) {
           memset(cert, '\0', sizeof(cert));
           int r;
           if ((r = handleGetUserCert(cert, recipientvalue)) != 0) {
-            bstring err = bformat("Handler returned with error %d\n", r);
-            sendBad(ssl, err->data);
-            bdestroy(err);
+            if (r == ERR_INVALID_USER) {
+              sendBad(ssl, ERR_INVALID_USER, ERR_INVALID_USER_MSG, ERR_INVALID_USER_MSG);
+            } else if (r == ERR_OPEN) {
+              sendBad(ssl, ERR_OPEN, ERR_OPEN_MSG, ERR_OPEN_MSG);
+            }
             bdestroy(recipientkey);
             bdestroy(recipientvalue);
             bstrListDestroy(lines);
@@ -645,7 +652,7 @@ int main(int mama, char **moo) {
             bdestroy(certKey);
             bdestroy(certValue);
             bdestroy(certData);
-            sendBad(ssl, ERR_MALFORMED_REQUEST);
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_MALFORMED_REQUEST);
             connection = 2;
             goto cleanup;
           };
@@ -656,7 +663,7 @@ int main(int mama, char **moo) {
         } else if (action == 2 && bstrccmp(path, "/sendmsg") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
           if (lines->qty != 3) {
-            sendBad(ssl, ERR_MALFORMED_REQUEST);            
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_MALFORMED_REQUEST);            
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;
@@ -672,7 +679,7 @@ int main(int mama, char **moo) {
                   0 ||
               bstrccmp(recipientkey, "recipient") != 0 ||
               bstrccmp(messagekey, "message") != 0) {
-            sendBad(ssl, ERR_MALFORMED_REQUEST);
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_MALFORMED_REQUEST);
             bdestroy(recipientkey);
             bdestroy(recipientvalue);
             bdestroy(messagekey);
@@ -683,9 +690,11 @@ int main(int mama, char **moo) {
           }
           int r;
           if ((r = handleSendMsg(recipientvalue, messagevalue)) != 0) {
-            bstring err = bformat("Handler returned with error %d\n", r);
-            sendBad(ssl, err->data);
-            bdestroy(err);
+            if (r == ERR_MAILBOX_FULL) {
+              sendBad(ssl, ERR_MAILBOX_FULL, ERR_MAILBOX_FULL_MSG, ERR_MAILBOX_FULL_MSG);
+            } else if (r == ERR_OPEN) {
+              sendBad(ssl, ERR_OPEN, ERR_OPEN_MSG, ERR_OPEN_MSG);
+            }
             bdestroy(recipientkey);
             bdestroy(recipientvalue);
             bdestroy(messagekey);
@@ -704,7 +713,7 @@ int main(int mama, char **moo) {
 
           bstring recipient = bfromcstr("");
           if (parseSubject(_subject, recipient) != 0) {
-            sendBad(ssl, ERR_MALFORMED_REQUEST);
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_MALFORMED_REQUEST);
             free(_subject);
             connection = 2;
             goto cleanup;
@@ -713,8 +722,7 @@ int main(int mama, char **moo) {
 
           struct bstrList *lines = bsplit(bdata, '\n');
           if (lines->qty != 2) {
-            SSL_write(ssl, ERR_MALFORMED_REQUEST,
-                      strlen(ERR_MALFORMED_REQUEST));
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_MALFORMED_REQUEST);
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;
@@ -722,9 +730,11 @@ int main(int mama, char **moo) {
           int r;
           char *msg;
           if ((r = handleRecvMsg(recipient, &msg)) != 0) {
-            bstring err = bformat("Handler returned with error %d\n", r);
-            sendBad(ssl, err->data);
-            bdestroy(err);
+            if (r == ERR_NO_MSG) {
+              sendBad(ssl, ERR_NO_MSG, ERR_NO_MSG_MSG, ERR_NO_MSG_MSG);
+            } else if (r == ERR_OPEN) {
+              sendBad(ssl, ERR_OPEN, ERR_OPEN_MSG, ERR_OPEN_MSG);
+            }
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;
@@ -736,7 +746,7 @@ int main(int mama, char **moo) {
             bdestroy(messageKey);
             bdestroy(messageValue);
             bdestroy(messageData);
-            sendBad(ssl, ERR_MALFORMED_REQUEST);
+            sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_MALFORMED_REQUEST);
             connection = 2;
             goto cleanup;
           };
@@ -746,7 +756,7 @@ int main(int mama, char **moo) {
           bdestroy(messageData);
           free(msg);
         } else {
-          sendBad(ssl, ERR_MALFORMED_REQUEST);
+          sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_MALFORMED_REQUEST);
           connection = 2;
         }
 

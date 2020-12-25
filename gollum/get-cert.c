@@ -206,26 +206,26 @@ int main(int argc, char *argv[]) {
     if (readReturn == 0) {
       break;
     }
-    if ((strstr(ibuf, "200 OK") != NULL) && (state == 0)) {
-      printf("Enter a path for cert: \n");
+    if ((strstr(ibuf, "200") == ibuf) && (state == 0)) {
+      printf("Enter a path to write the certificate: \n");
       scanf("%s", writePath);
       state = 1;
-    } else if ((strstr(ibuf, "201 OK") != NULL) && (state == 0)) {
-      printf("Warning: Certificate exists already!");
-      printf("Enter a path for cert: \n");
+    } else if ((strstr(ibuf, "201") == ibuf) && (state == 0)) {
+      printf("Warning: Certificate exists already! To update your private key, please use changepw.\n");
+      printf("Enter a path to write the certificate: \n");
       scanf("%s", writePath);
       state = 1;
-    } else if ((strstr(ibuf, "-1") != NULL) && (state == 0)) {
-      printf("Error -1: Bad Username");
+    } else if ((strstr(ibuf, "-1")  == ibuf) && (state == 0)) {
+      printf("Error: Bad Username\n");
       break;
-    } else if ((strstr(ibuf, "-2") != NULL) && (state == 0)) {
-      printf("Error -2: Wrong Password");
+    } else if ((strstr(ibuf, "-2")  == ibuf) && (state == 0)) {
+      printf("Error: Wrong Password\n");
       break;
-    } else if ((strstr(ibuf, "-3") != NULL) && (state == 0)) {
-      printf("Error -3: Opening file or directory error");
+    } else if ((strstr(ibuf, "-3")  == ibuf) && (state == 0)) {
+      printf("Error: Opening file or directory error\n");
       break;
-    } else if ((strstr(ibuf, "400") != NULL) && (state == 0)) {
-      printf("Error 400: Problem with username, password or key.");
+    } else if ((strstr(ibuf, "400")  == ibuf) && (state == 0)) {
+      printf("Error: Problem with username, password or key\n");
       break;
     } else if ((state == 1) && (ibuf[0] == '\n')) {
       state = 2;
@@ -234,9 +234,6 @@ int main(int argc, char *argv[]) {
       bconcat(certif, _ibuf);
       bdestroy(_ibuf);
     } else if ((state == 2) && (ibuf[0] == '\n')) {
-      break;
-    } else {
-      printf("not handled\n");
       break;
     }
   }
@@ -252,7 +249,7 @@ int main(int argc, char *argv[]) {
     } else {
       fputs(resultCertif, fp);
       fclose(fp);
-      printf("Wrote certification to: %s\n", writePath);
+      printf("Wrote certificate to: %s\n", writePath);
     }
     bdestroy(bkey1);
     bdestroy(bvalue1);

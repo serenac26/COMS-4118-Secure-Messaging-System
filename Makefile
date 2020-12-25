@@ -85,7 +85,6 @@ client: sendmsg recvmsg getcert changepw
 	sudo cp $(GOLLUM)/makecsr.sh $(GOLLUM)/genkey.sh $(TREE)/client/bin
 	sudo cp imopenssl.cnf $(TREE)/client
 
-# Not compiling yet
 getcert: get-cert.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
@@ -93,7 +92,6 @@ getcert: get-cert.o utils.o $(BSTROBJS) $(B64OBJS)
 changepw: change-pw.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
-#
 
 sendmsg: send-msg.o utils.o gollumutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
