@@ -186,16 +186,25 @@ sbio=BIO_new(BIO_s_socket());
     }
 
     if ((state == 2) && (certif != NULL)) {
-        bstring temp = bfromcstr(certif);
-        decodeMessage(temp);
+        bstring temp1 = bfromcstr(certif);
+        bstring bkey1 = bfromcstr("");
+        bstring bvalue1 = bfromcstr("");
+        deserializeData(bkey1, bvalue1, temp1, 1);
         resultCertif = temp->data;
         FILE *fp;
         fp = fopen(writePath, "w+");
         fputs(resultCertif+12, fp);
         fclose(fp);
+        bdestroy(temp1);
+        bdestroy(bkey1);
+        bdestroy(bvalue1);
         printf("Wrote certification to: %s\n", writePath);
     }
     free(privatekey);
     free(csr);
+    free(buffer);
+    free(sbio);
+    bdestroy(bkey);
+    bdestroy(bvalue);
     return 0;
 }
