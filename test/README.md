@@ -40,14 +40,18 @@ check certificate change
 Test Case 3:
 getcert idempotency
 * A creates new key with genkey
-* A getcert with new pw (from test 2) and new key
+* A getcert with pw (updated in test 2) and new key
     * should NOT get new cert since one already exists
     * check diff btw old cert and "new" cert files
-* A sendmsg to B using same cert (from test 2)
+* A sendmsg to B (using cert from test 2)
     * message 00001 should be written to B's mailbox
+* B recvmsg
+    * message 00001 should be deleted from B's mailbox
 
 Test Case 4:
 changepw with pending messages
+* A sendmsg to B using current certificate
+    * message 00001 should be written to B's mailbox
 * B changepw with new pw and some key
     * should fail since B has an unread msg from A
 
@@ -61,10 +65,14 @@ unsend msg easter egg
     * message 00001 should be deleted from B's mailbox
 
 Test Case 6:
-sendmsg to invalid recipients
+sendmsg to invalid recipient
+* A sendmsg to invalid recipient and B
+    * should get an error for invalid recipient and successfully write message 00001 to B's mailbox
 
 Test Case 7:
 sendmsg to recipients who have not generated a certificate yet
+* A sendmsg to C
+    * no message should be written to C's mailbox
 
 ### Security Tests
 
