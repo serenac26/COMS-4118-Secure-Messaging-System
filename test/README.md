@@ -10,7 +10,9 @@ cd <tree>/server/bin
 ./pemithor
 ```
 In another shell:
-`sudo ./test.sh <tree> <runspam>`
+`sudo ./test.sh <tree> [runspam]`
+
+The optional [runspam] argument will include the spam sendmsg test in the test suite, which attempts to send 100000 messages to a recipient to test handling of a full mailbox. It will not run by default. The test takes >30min, so tester beware.
 
 Note that you can only run this test script once after installing a new directory. In addition, runspam is an intensive test that takes a long time to execute. On subsequent runs, the server and CA will not be in the expected initial states anymore and tests will fail. You must start with a fresh directory tree before testing with `test.sh`.
 

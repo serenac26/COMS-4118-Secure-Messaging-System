@@ -3,16 +3,19 @@
 # run with sudo
 
 RUNSPAM=$2
+if [ "$RUNSPAM" == "runspam" ] ; then
+    echo "HI"
+fi
 
 tmp=../../../test/tmp
 mail=../../server/mail
 
 A=addleness
-Ap="$(sudo grep 'addleness' creds.txt | cut -d' ' -f3)"
+Ap="$(sudo grep 'addleness' tmp/creds.txt | cut -d' ' -f3)"
 B=muermo
-Bp="$(sudo grep 'muermo' creds.txt | cut -d' ' -f3)"
+Bp="$(sudo grep 'muermo' tmp/creds.txt | cut -d' ' -f3)"
 C=forfend
-Cp="$(sudo grep 'forfend' creds.txt | cut -d' ' -f3)"
+Cp="$(sudo grep 'forfend' tmp/creds.txt | cut -d' ' -f3)"
 
 keysuffix=.key.pem
 certsuffix=.cert.pem
@@ -681,7 +684,7 @@ testsecurity () {
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
-    if [ "$RUNSPAM" = true ] ; then
+    if [ "$RUNSPAM" == "runspam" ] ; then
         testspamsendmsg
         if [ $? -ne 0 ]; then
             echo "Test Spam sendmsg FAILED"
