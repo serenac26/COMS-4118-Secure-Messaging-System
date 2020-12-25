@@ -161,65 +161,65 @@ int getcert(char *cert, char *username, int *n, int revoke) {
 }
 
 // Testing
-int main(int argc, char *argv[]) {
-    char *op;
-    if (argc < 2) {
-        fprintf(stderr, "bad arg count; usage: faramailutils <operation>\nsupported operations: login checkmail changepw");
-        return 1;
-    }
-    op = argv[1];
-
-    if (strcmp(op, "login") == 0) {
-        char *username;
-        char *pw;
-        if (argc != 4) {
-            fprintf(stderr, "bad arg count; usage: faramailutils login <username> <password>\n");
-            return 1;
-        }
-        username = argv[2];
-        pw = argv[3];
-        return login(username, pw);
-    }
-    
-    if (strcmp(op, "checkmail") == 0) {
-        char *username;
-        if (argc != 3) {
-            fprintf(stderr, "bad arg count; usage: faramailutils checkmail <username>\n");
-            return 1;
-        }
-        username = argv[2];
-        return checkmail(username);
-    }
-
-    if (strcmp(op, "changepw") == 0) {
-        char *username;
-        char *pw;
-        if (argc != 4) {
-            fprintf(stderr, "bad arg count; usage: faramailutils changepw <username> <password>\n");
-            return 1;
-        }
-        username = argv[2];
-        pw = argv[3];
-        return changepw(username, pw);
-    }
-    
-    if (strcmp(op, "getcert") == 0) {
-        char *cert;
-        char *username;
-        int n;
-        if (argc != 3) {
-            fprintf(stderr, "bad arg count; usage: faramailutils getcert <username>\n");
-            return 1;
-        }
-        username = argv[2];
-        cert = (char *)malloc(MAX_CERT_SIZE);
-        if (!cert) {
-            perror("malloc error");
-            return 1;
-        }
-        return getcert(cert, username, &n, 1);
-    }
-
-    fprintf(stderr, "operation %s not supported\n", op);
-    return 1;
-}
+// int main(int argc, char *argv[]) {
+//     char *op;
+//     if (argc < 2) {
+//         fprintf(stderr, "bad arg count; usage: faramailutils <operation>\nsupported operations: login checkmail changepw");
+//         return 1;
+//     }
+//     op = argv[1];
+// 
+//     if (strcmp(op, "login") == 0) {
+//         char *username;
+//         char *pw;
+//         if (argc != 4) {
+//             fprintf(stderr, "bad arg count; usage: faramailutils login <username> <password>\n");
+//             return 1;
+//         }
+//         username = argv[2];
+//         pw = argv[3];
+//         return login(username, pw);
+//     }
+//     
+//     if (strcmp(op, "checkmail") == 0) {
+//         char *username;
+//         if (argc != 3) {
+//             fprintf(stderr, "bad arg count; usage: faramailutils checkmail <username>\n");
+//             return 1;
+//         }
+//         username = argv[2];
+//         return checkmail(username);
+//     }
+// 
+//     if (strcmp(op, "changepw") == 0) {
+//         char *username;
+//         char *pw;
+//         if (argc != 4) {
+//             fprintf(stderr, "bad arg count; usage: faramailutils changepw <username> <password>\n");
+//             return 1;
+//         }
+//         username = argv[2];
+//         pw = argv[3];
+//         return changepw(username, pw);
+//     }
+//     
+//     if (strcmp(op, "getcert") == 0) {
+//         char *cert;
+//         char *username;
+//         int n;
+//         if (argc != 3) {
+//             fprintf(stderr, "bad arg count; usage: faramailutils getcert <username>\n");
+//             return 1;
+//         }
+//         username = argv[2];
+//         cert = (char *)malloc(MAX_CERT_SIZE);
+//         if (!cert) {
+//             perror("malloc error");
+//             return 1;
+//         }
+//         return getcert(cert, username, &n, 1);
+//     }
+// 
+//     fprintf(stderr, "operation %s not supported\n", op);
+//     return 1;
+// }
