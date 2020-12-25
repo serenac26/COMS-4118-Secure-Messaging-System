@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
     pid = fork();
     //CHANGE int config and directory 
     if (pid == 0) {
-        execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username, argv[2], tempfile);
+        execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username, argv[2], tempfile, (char *)NULL);
     }
     while ((wpid = wait(&status)) > 0);
     FILE *temp; 
@@ -134,15 +134,20 @@ sbio=BIO_new(BIO_s_socket());
     char *header2 = "connection: close\n";
     char header3[BUF_SIZE];
 
-    char usernameLine[sizeof(username)+strlen("username:\n")];
+    char usernameLine[strlen(username)+strlen("username:\n")+1];
+    usernameLine[strlen(username)+strlen("username:\n")] = '\0';
     sprintf(usernameLine, "username:%s\n", username);
 
-    char passwordLine[sizeof(password)+strlen("password:\n")];
+    char passwordLine[strlen(password)+strlen("password:\n")+1];
+    usernameLine[strlen(password)+strlen("password:\n")] = '\0';
     sprintf(passwordLine, "password:%s\n", password);
 
-    char newPasswordLine[sizeof(newPassword)+strlen("newpassword:\n")];
+    char newPasswordLine[strlen(newPassword)+strlen("newpassword:\n")+1];
+    usernameLine[strlen(newPassword)+strlen("newpassword:\n")] = '\0';
     sprintf(newPasswordLine, "newpassword:%s\n", newPassword);
-    char csrLine[strlen(csr) + strlen("csr:\n")];
+    
+    char csrLine[strlen(csr) + strlen("csr:\n")+1];
+    csrLine[strlen(csrLine)+strlen("csr:\n")] = '\0'; 
     sprintf(csrLine, "csr:%s\n", csr);
     bstring tempstring = bfromcstr(csrLine);
     bstring bkey = bfromcstr("");
@@ -207,8 +212,11 @@ sbio=BIO_new(BIO_s_socket());
     }
     free(csr);
     free(buffer);
-    free(sbio);
     bdestroy(bkey);
     bdestroy(bvalue);
+    close(sock);
+    SSL_CTX_free(ctx);
+    EVP_cleanup();
+    free(password);
     return 0;
 }
