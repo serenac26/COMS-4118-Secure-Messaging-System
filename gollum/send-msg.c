@@ -273,13 +273,13 @@ int main(int argc, char *argv[]) {
                              strlen(gucrecipientLine))];
     sprintf(gucheader3, "content-length: %ld\n", strlen(gucrecipientLine));
 
-    printf("=======\n");
-    printf("%s", gucheader);
-    printf("%s", gucheader2);
-    printf("%s", gucheader3);
-    printf("%s", "\n");
-    printf("%s", gucrecipientLine);
-    printf("=======\n");
+    // printf("=======\n");
+    // printf("%s", gucheader);
+    // printf("%s", gucheader2);
+    // printf("%s", gucheader3);
+    // printf("%s", "\n");
+    // printf("%s", gucrecipientLine);
+    // printf("=======\n");
 
     SSL_write(ssl, gucheader, strlen(gucheader));
     SSL_write(ssl, gucheader2, strlen(gucheader2));
@@ -445,12 +445,12 @@ int main(int argc, char *argv[]) {
 
     // fprintf(stdout, "%s%s%s%s%smessage-length: %ld\n%s", smheader, smheader2,
     // smheader3, "\n", smrecipientLine, strlen(smmessageLine), "\n");
-    printf("%s", smheader);
-    printf("%s", smheader2);
-    printf("%s", smheader3);
-    printf("%s", "\n");
-    printf("%s", smrecipientLine);
-    printf("%s", smmessageLine);
+    // printf("%s", smheader);
+    // printf("%s", smheader2);
+    // printf("%s", smheader3);
+    // printf("%s", "\n");
+    // printf("%s", smrecipientLine);
+    // printf("%s", smmessageLine);
 
     SSL_write(ssl, smheader, strlen(smheader));
     SSL_write(ssl, smheader2, strlen(smheader2));
