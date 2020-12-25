@@ -216,7 +216,7 @@ int getcert(char *cert, char *username, int *n, int revoke) {
 //             perror("malloc error");
 //             return 1;
 //         }
-//         return getcert(cert, username, &n, 0);
+//         return getcert(cert, username, &n, 1);
 //     }
 
 //     fprintf(stderr, "operation %s not supported\n", op);
