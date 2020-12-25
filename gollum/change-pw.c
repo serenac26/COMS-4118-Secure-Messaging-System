@@ -93,6 +93,10 @@ int main(int argc, char *argv[]) {
   if ((wpid = wait(&status)) < 0) exit(1);
   FILE *temp;
   temp = fopen(tempfile, "r+");
+  if (!temp) {
+    fprintf(stderr, "File open error\n");
+    return 1;
+  }
   fseek(temp, 0, SEEK_END);
   long fsize1 = ftell(temp);
   fseek(temp, 0, SEEK_SET);
@@ -266,9 +270,13 @@ int main(int argc, char *argv[]) {
     resultCertif = bvalue1->data;
     FILE *fp;
     fp = fopen(writePath, "w+");
-    fputs(resultCertif, fp);
-    fclose(fp);
-    printf("Wrote certification to: %s\n", writePath);
+    if (!fp) {
+      fprintf(stderr, "File write error\n");
+    } else {
+      fputs(resultCertif, fp);
+      fclose(fp);
+      printf("Wrote certification to: %s\n", writePath);
+    }
     bdestroy(bkey1);
     bdestroy(bvalue1);
   }
