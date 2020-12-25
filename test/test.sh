@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# run as sudo!
-# the tests will handle switching to the correct mail users before running commands
-# to ensure that permissions are being honored
+# run with sudo
 
 tmp=../../../test/tmp
 mail=../../server/mail
