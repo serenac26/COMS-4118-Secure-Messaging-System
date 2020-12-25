@@ -64,8 +64,7 @@ int main(int argc, char *argv[]) {
     execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username,
           privatekeyfile, tempfile, '\0');
   }
-  if ((wpid = wait(&status)) < 0)
-		exit(1);
+  if ((wpid = wait(&status)) < 0) exit(1);
   FILE *temp;
   temp = fopen(tempfile, "r+");
   fseek(temp, 0, SEEK_END);
@@ -73,6 +72,7 @@ int main(int argc, char *argv[]) {
   fseek(temp, 0, SEEK_SET);
 
   char *csr = malloc(fsize1 + 1);
+  memset(csr, '\0', fsize1 + 1);
   fread(csr, 1, fsize1, temp);
   fclose(temp);
   remove("temp.txt");
@@ -126,6 +126,7 @@ int main(int argc, char *argv[]) {
     close(sock);
     SSL_CTX_free(ctx);
     EVP_cleanup();
+		free(password);
     return 0;
   }
 
@@ -144,14 +145,14 @@ int main(int argc, char *argv[]) {
   char header3[100];
 
   char usernameLine[strlen(username) + strlen("username:\n") + 1];
-	usernameLine[strlen(username) + strlen("username:\n")] = '\0';
+  usernameLine[strlen(username) + strlen("username:\n")] = '\0';
   sprintf(usernameLine, "username:%s\n", username);
   char passwordLine[strlen(password) + strlen("password:\n") + 1];
-	passwordLine[strlen(password) + strlen("password:\n")] = '\0';
+  passwordLine[strlen(password) + strlen("password:\n")] = '\0';
   sprintf(passwordLine, "password:%s\n", password);
 
   char csrLine[strlen(csr) + strlen("csr:\n") + 1];
-	csrLine[strlen(csr) + strlen("csr:\n")] = '\0';
+  csrLine[strlen(csr) + strlen("csr:\n")] = '\0';
   sprintf(csrLine, "csr:%s\n", csr);
 
   bstring tempstring = bfromcstr(csrLine);
@@ -231,8 +232,11 @@ int main(int argc, char *argv[]) {
   bdestroy(bvalue);
 
   // Cleanup at the end
+  SSL_shutdown(ssl);
+  SSL_free(ssl);
   close(sock);
   SSL_CTX_free(ctx);
   EVP_cleanup();
+	free(password);
   return 0;
 }
