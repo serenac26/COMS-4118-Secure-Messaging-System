@@ -156,4 +156,4 @@ cd $pwd
 rm $1/server/rootopenssl.cnf
 cp $1/server/ca/certs/ca.cert.pem $1/client/ca.cert.pem
 cp $1/server/ca/intermediate/certs/intermediate.cert.pem $1/client/intermediate.cert.pem
-cp $1/server/ca/intermediate/certs/ca.chain.cert.pem $1/client/ca.chain.cert.pem
+cp $1/server/ca/intermediate/certs/ca-chain.cert.pem $1/client/ca-chain.cert.pem
