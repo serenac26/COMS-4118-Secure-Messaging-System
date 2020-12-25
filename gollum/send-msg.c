@@ -255,7 +255,8 @@ int main(int argc, char *argv[]) {
   while (curr != NULL) {
     // Send recipient name to server /getusercert
     bstring r = curr->str;
-    if (r == NULL) {curr = curr->next;
+    if (r == NULL) {
+      curr = curr->next;
       continue;
     }
     i++;
@@ -291,7 +292,7 @@ int main(int argc, char *argv[]) {
     response = (char *)malloc(MB);
     if (!response) {
       remove(r_certfile);
-        curr = curr->next;
+      curr = curr->next;
       free(response);
       response = NULL;
       continue;
@@ -301,7 +302,7 @@ int main(int argc, char *argv[]) {
     int readReturn = SSL_peek(ssl, code, sizeof(code) - 1);
     if (readReturn == 0) {
       remove(r_certfile);
-        curr = curr->next;
+      curr = curr->next;
       free(response);
       response = NULL;
       continue;
@@ -363,7 +364,7 @@ int main(int argc, char *argv[]) {
     if (0 != encryptmsg(r_certfile, msginfile, unsigned_encrypted_file)) {
       remove(r_certfile);
       remove(unsigned_encrypted_file);
-        curr = curr->next;
+      curr = curr->next;
       continue;
     }
     remove(r_certfile);
@@ -374,7 +375,7 @@ int main(int argc, char *argv[]) {
                      signed_encrypted_file)) {
       remove(unsigned_encrypted_file);
       remove(signed_encrypted_file);
-        curr = curr->next;
+      curr = curr->next;
       continue;
     }
     remove(unsigned_encrypted_file);
@@ -383,7 +384,7 @@ int main(int argc, char *argv[]) {
     buffer = (char *)malloc(MB);
     if (!buffer) {
       remove(signed_encrypted_file);
-        curr = curr->next;
+      curr = curr->next;
       continue;
     }
     *buffer = '\0';
@@ -393,7 +394,7 @@ int main(int argc, char *argv[]) {
       remove(signed_encrypted_file);
       free(buffer);
       buffer = NULL;
-        curr = curr->next;
+      curr = curr->next;
       continue;
     }
     while (0 < getline(&line, &size, fp)) {
@@ -418,7 +419,7 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Malloc failed.\n");
       free(buffer);
       buffer = NULL;
-        curr = curr->next;
+      curr = curr->next;
       continue;
     }
     bstring bsmessage = bfromcstr("");
