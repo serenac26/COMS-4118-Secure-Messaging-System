@@ -111,7 +111,7 @@ testutils: testutils.o utils.o $(BSTROBJS) $(B64OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f pemithor boromail boromailutils faramail faramailutils gollomutils getcert changepw sendmsg recvmsg testutils *.o
+	rm -f pemithor boromail boromailutils faramail faramailutils gollumutils getcert changepw sendmsg recvmsg testutils *.o
 
 .PHONY : all
 .PHONY : install
