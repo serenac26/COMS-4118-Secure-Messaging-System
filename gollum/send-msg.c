@@ -36,7 +36,7 @@
 
 int verify_callback(int ok, X509_STORE_CTX *ctx) {
   /* Tolerate certificate expiration */
-  p("verify callback error: %d\n", X509_STORE_CTX_get_error(ctx));
+  fprintf(stderr, "verify callback error: %d\n", X509_STORE_CTX_get_error(ctx));
   /* Otherwise don't override */
   return ok;
 }
@@ -66,7 +66,7 @@ int create_socket(int port) {
 
 int main(int argc, char *argv[]) {
   struct stat st;
-  char *certfile, *keyfile, *msginfile, *buffer;
+  char *certfile, *keyfile, *msginfile, *buffer, *request;
   char *line = NULL;
   size_t size = 0;
   FILE *fp;
@@ -84,131 +84,70 @@ int main(int argc, char *argv[]) {
   keyfile = argv[2];
   msginfile = argv[3];
 
-  // TODO: Give both cert and private key to do SSL handshake verification
-  /*
-  SSL_CTX *ctx;
-  SSL *ssl;
-  const SSL_METHOD *meth;
-  BIO *sbio;
-  int err; char *s;
+  // SSL handshake verification
 
-  int ilen;
-  char ibuf[512];
+  SSL_library_init();       /* load encryption & hash algorithms for SSL */
+  SSL_load_error_strings(); /* load the error strings for good error reporting
+                             */
 
-  struct sockaddr_in sin;
-  int sock;
-  struct hostent *he;
-  SSL_library_init();
-  SSL_load_error_strings();
+  // TLSv1_1_server_method is deprecated
+  // Can switch back if inconvenient
+  const SSL_METHOD *mamamethod = TLS_client_method();
+  SSL_CTX *ctx = SSL_CTX_new(mamamethod);
 
-  meth = TLS_client_method();
-  ctx = SSL_CTX_new(meth);
-  SSL_CTX_set_default_verify_dir(ctx);
-  SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+  // Only accept the LATEST and GREATEST in TLS
+  SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
+  SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
 
-  ssl = SSL_new(ctx);
-  sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (sock < 0) {
-    perror("socket");
-    return 1;
-  }
-
-  bzero(&sin, sizeof sin);
-  sin.sin_family = AF_INET;
-  sin.sin_port = htons(443);
-  he = gethostbyname("");//edit this
-
-  memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
-  if (connect(sock, (struct sockaddr *)&sin, sizeof sin) < 0) {
-    perror("connect");
-    return 2;
-  }
-  sbio=BIO_new(BIO_s_socket());
-  BIO_set_fd(sbio, sock, BIO_NOCLOSE);
-  SSL_set_bio(ssl, sbio, sbio);
-  err = SSL_connect(ssl);
-
-  if (SSL_connect(ssl) != 1) {
-    switch (SSL_get_error(ssl, err)) {
-      case SSL_ERROR_NONE: s="SSL_ERROR_NONE"; break;
-      case SSL_ERROR_ZERO_RETURN: s="SSL_ERROR_ZERO_RETURN"; break;
-      case SSL_ERROR_WANT_READ: s="SSL_ERROR_WANT_READ"; break;
-      case SSL_ERROR_WANT_WRITE: s="SSL_ERROR_WANT_WRITE"; break;
-      case SSL_ERROR_WANT_CONNECT: s="SSL_ERROR_WANT_CONNECT"; break;
-      case SSL_ERROR_WANT_ACCEPT: s="SSL_ERROR_WANT_ACCEPT"; break;
-      case SSL_ERROR_WANT_X509_LOOKUP: s="SSL_ERROR_WANT_X509_LOOKUP"; break;
-      case SSL_ERROR_WANT_ASYNC: s="SSL_ERROR_WANT_ASYNC"; break;
-      case SSL_ERROR_WANT_ASYNC_JOB: s="SSL_ERROR_WANT_ASYNC_JOB"; break;
-      case SSL_ERROR_SYSCALL: s="SSL_ERROR_SYSCALL"; break;
-      case SSL_ERROR_SSL: s="SSL_ERROR_SSL"; break;
-    }
-    fprintf(stderr, "SSL error: %s\n", s);
+  if (SSL_CTX_use_certificate_file(ctx, certfile, SSL_FILETYPE_PEM) != 1) {
     ERR_print_errors_fp(stderr);
-    return 3;
+    exit(EXIT_FAILURE);
   }
 
-  //writing stuff with http
-  //GET /HTTP/1.0
-  */
+  // TODO: need to input password
+  if (SSL_CTX_use_PrivateKey_file(ctx, keyfile, SSL_FILETYPE_PEM) != 1) {
+    ERR_print_errors_fp(stderr);
+    exit(EXIT_FAILURE);
+  }
+  
 
-  // SSL_library_init();       /* load encryption & hash algorithms for SSL */
-  // SSL_load_error_strings(); /* load the error strings for good error reporting
-  //                            */
+  if (SSL_CTX_load_verify_locations(ctx, CA_CHAIN, NULL) != 1) {
+    ERR_print_errors_fp(stderr);
+    exit(EXIT_FAILURE);
+  }
+  
 
-  // // TLSv1_1_server_method is deprecated
-  // // Can switch back if inconvenient
-  // const SSL_METHOD *mamamethod = TLS_client_method();
-  // SSL_CTX *ctx = SSL_CTX_new(mamamethod);
+  SSL_CTX_set_verify(ctx,
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT |
+                         SSL_VERIFY_CLIENT_ONCE,
+                     verify_callback);
+  /* Set the verification depth to 1 */
+  
+  SSL_CTX_set_verify_depth(ctx, 1);
 
-  // // Only accept the LATEST and GREATEST in TLS
-  // SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
-  // SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
+  int sock = create_socket(6969);
 
-  // if (SSL_CTX_use_certificate_file(ctx, certfile, SSL_FILETYPE_PEM) != 1) {
-  //   ERR_print_errors_fp(stderr);
-  //   exit(EXIT_FAILURE);
-  // }
+  SSL *ssl = SSL_new(ctx);
 
-  // // TODO: need to input password
-  // if (SSL_CTX_use_PrivateKey_file(ctx, keyfile, SSL_FILETYPE_PEM) != 1) {
-  //   ERR_print_errors_fp(stderr);
-  //   exit(EXIT_FAILURE);
-  // }
+  SSL_set_fd(ssl, sock);
+  
 
-  // if (SSL_CTX_load_verify_locations(ctx, CA_CHAIN, NULL) != 1) {
-  //   ERR_print_errors_fp(stderr);
-  //   exit(EXIT_FAILURE);
-  // }
+  if (SSL_connect(ssl) <= 0) {
+    ERR_print_errors_fp(stderr);
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
+    close(sock);
+    goto cleanup;
+  }
 
-  // SSL_CTX_set_verify(ctx,
-  //                    SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT |
-  //                        SSL_VERIFY_CLIENT_ONCE,
-  //                    verify_callback);
-  // /* Set the verification depth to 1 */
-  // SSL_CTX_set_verify_depth(ctx, 1);
+  char rbuf[READBUF_SIZE];
+  char wbuf[WRITEBUF_SIZE];
 
-  // int sock = create_socket(6969);
+  memset(rbuf, '\0', sizeof(rbuf));
+  memset(wbuf, '\0', sizeof(wbuf));
+  
 
-  // SSL *ssl = SSL_new(ctx);
 
-  // SSL_set_fd(ssl, sock);
-
-  // if (SSL_connect(ssl) <= 0) {
-  //   ERR_print_errors_fp(stderr);
-  //   SSL_shutdown(ssl);
-  //   SSL_free(ssl);
-  //   close(sock);
-  //   goto cleanup;
-  // }
-
-  // char rbuf[READBUF_SIZE];
-  // char wbuf[WRITEBUF_SIZE];
-
-  // memset(rbuf, '\0', sizeof(rbuf));
-  // memset(wbuf, '\0', sizeof(wbuf));
-
-  // SSL_read(...)
-  // SSL_write(...)
 
   // Read in message from file (limit size to 1 MB)
   if (!(stat(msginfile, &st) == 0 && S_ISREG(st.st_mode) && st.st_size < MB)) {
@@ -313,18 +252,109 @@ int main(int argc, char *argv[]) {
   struct Node *curr = rcpts;
   int i = 0;
   while (curr != NULL) {
-    // TODO: Send recipient name to server /sendto
+    // Send recipient name to server /getusercert
     bstring r = curr->str;
     if (r == NULL) {
       curr = curr->next;
       continue;
     }
     i++;
-    fprintf(stdout, "recipient: %s\n", (char *)r->data);
+    // fprintf(stdout, "recipient: %s\n", (char *)r->data);
 
-    // TODO: Server sends back recipient certificate which we write to temp file
-    // r_certfile Error handling: remove(r_certfile); curr = curr->next;
-    // continue;
+    
+    int bytes = (1024*1024);
+    char *method = "getusercert";
+    char *request = (char *) malloc(sizeof(char)*bytes);
+    
+    char header[100];
+    sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, method);
+    char *header2 = "connection: close\n"; // TODO: change to keep-alive
+    char header3[100];
+    char recipientLine[strlen((char *)r->data)+strlen("recipient:\n")+1];
+    sprintf(recipientLine, "recipient:%s\n", (char *)r->data);
+    sprintf(header3, "content-length: %ld\n", strlen(recipientLine));
+    
+    sprintf(request, "%s%s%s%s%s%s", header, header2, header3, "\n", recipientLine, "\n");
+    fprintf(stdout, "Buffer:\n%s", request);
+    SSL_write(ssl, header, strlen(header));
+    SSL_write(ssl, header2, strlen(header2));
+    SSL_write(ssl, header3, strlen(header3));
+    SSL_write(ssl, "\n", strlen("\n"));
+    SSL_write(ssl, recipientLine, strlen(recipientLine));
+    SSL_write(ssl, "\n", strlen("\n"));
+    free(request);
+    request = NULL;
+
+
+    // Server sends back recipient certificate which we write to temp file r_certfile 
+    // Error handling:
+      // remove(r_certfile);
+      // curr = curr->next;
+      // continue;
+    char *response = (char *)malloc(MB);
+    if (!response) {
+      remove(r_certfile);
+      curr = curr->next;
+      free(response);
+      response = NULL;
+      continue;
+    }
+    *response = '\0';
+    char code[4];
+    int readReturn = SSL_peek(ssl, code, sizeof(code)-1);
+    if (readReturn == 0) {
+      break;
+    }
+    code[sizeof(code)-1] = '\0';
+    int state = 0;
+    while ((strstr(code, "200") != NULL)) {
+      state = 1;
+      char buf[2];
+      readReturn = SSL_read(ssl, buf, 1);
+      buf[1] = '\0';
+      if (readReturn == 0) {
+        break;
+      }
+      sprintf(response+strlen(response), "%s", buf);
+    }
+    if ((state == 1) && (response != NULL)) {
+      bstring bresponse = bfromcstr(response);
+      struct bstrList *lines = bsplit(bresponse, '\n');
+      bstring bkey = bfromcstr("");
+      bstring bvalue = bfromcstr("");
+      if (0 != deserializeData(bkey, bvalue, lines->entry[4], 1)) {
+        remove(r_certfile);
+        curr = curr->next;
+        free(response);
+        response = NULL;
+        bdestroy(bresponse);
+        bdestroy(bkey);
+        bdestroy(bvalue);
+        freeList(lines);
+        continue;
+      }
+      if (0 != bstrccmp(bkey, "certificate")) {
+        remove(r_certfile);
+        curr = curr->next;
+        free(response);
+        response = NULL;
+        bdestroy(bresponse);
+        bdestroy(bkey);
+        bdestroy(bvalue);
+        freeList(lines);
+        continue;
+      }
+      fp = fopen(r_certfile, "w");
+      fputs((char *)bvalue->data, fp);
+      fclose(fp);
+      fp = NULL;
+      bdestroy(bresponse);
+      bdestroy(bkey);
+      bdestroy(bvalue);
+      bstrListDestroy(lines);
+      printf("Wrote certificate to: %s\n", r_certfile);
+    }
+
 
     // Encrypt the message with recipient cert and write to temp file
     // unsigned.encrypted.msg
@@ -365,9 +395,31 @@ int main(int argc, char *argv[]) {
     free(line);
     line = NULL;
     fclose(fp);
+    fp = NULL;
     remove(signed_encrypted_file);
 
-    //  TODO: Send the signed message to the server /msgin
+
+    // TODO: Send the signed message to the server /msgin
+    // int bytes = (1024*1024);
+    // char *method = "getusercert";
+    // *request = (char *) malloc(sizeof(char)*bytes);
+    
+    // char header[100];
+    // sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, method);
+    // char *header2 = "connection: close\n"; // TODO: change to keep-alive
+    // char header3[100];
+    // char recipientLine[strlen((char *)r->data)+strlen("recipient:\n")+1];
+    // sprintf(recipientLine, "recipient:%s\n", (char *)r->data);
+    // sprintf(header3, "content-length: %ld\n", strlen(recipientLine));
+    
+    // sprintf(buffer, "%s%s%s%s%s%s", header, header2, header3, "\n", recipientLine, "\n");
+    // fprintf(stdout, "Buffer:\n%s", buffer);
+    // SSL_write(ssl, buffer, strlen(buffer));
+    
+    // TODO: Check if curr->next == NULL and close connection with server
+    // Error handling:
+      // freeList(rcpts);
+      // return -1;
     fprintf(stdout, "%s", buffer);
 
     // TODO: Get response back from server
@@ -381,11 +433,6 @@ int main(int argc, char *argv[]) {
     buffer = NULL;
     curr = curr->next;
   }
-
-  // TODO: Close connection with server
-  // Error handling:
-  // freeList(rcpts);
-  // return -1;
 
   freeList(rcpts);
 
