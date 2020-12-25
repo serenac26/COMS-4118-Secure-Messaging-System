@@ -13,6 +13,7 @@
 #include "bstraux.h"
 #include "bsafe.h"
 #include "bstrlibext.h"
+#include "base64.h"
 
 #define HASHEDPW_PATH "../credentials"
 #define HASHEDPW_SUFFIX ".hashedpw"
@@ -26,13 +27,7 @@
 
 #define MAX_CERT_SIZE 2048
 
-#define ROOT_CERTIFICATE "../ca/certs/ca.cert.pem"
-#define INTERMED_CERTIFICATE "../ca/intermediate/certs/intermediate.cert.pem"
-
 #define IMCNF "imopenssl.cnf"
-
-#define FROM "From: "
-#define TO "To: "
 
 #define GB 1000000000
 #define MB 1000000
@@ -64,5 +59,13 @@ bstring printList(struct Node *list, const char *delim);
 int recipExists(bstring recip);
 
 int getMessageFilename(bstring recip, bstring filename);
+
+void encodeMessage(bstring message);
+
+void decodeMessage(bstring message);
+
+int serializeData(bstring key, bstring value, bstring result, int encode);
+
+int deserializeData(bstring key, bstring value, bstring result, int decode);
 
 #endif

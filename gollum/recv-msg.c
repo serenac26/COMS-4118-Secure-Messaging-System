@@ -6,91 +6,230 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <regex.h>
+
+#include "bstrlib.h"
+#include "utf8util.h"
+#include "buniutil.h"
+#include "bstraux.h"
+#include "bsafe.h"
+#include "bstrlibext.h"
+
+#include "utils.h"
+#include "gollumutils.h"
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
+#define SENDER_CERTIFICATE "../tmp/sender.cert.pem"
+#define UNSIGNED_ENCRYPTED_MSG "../tmp/unsigned.encrypted.msg"
+#define UNSIGNED_DECRYPTED_MSG "../tmp/unsigned.decrypted.msg"
+#define SIGNED_ENCRYPTED_MSG "../tmp/signed.encrypted.msg"
+
+#define MAILFROM_REGEX "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
+
 // usage: recv-msg <cert-file> <key-file> <msg-out-file>
 
-// 1. give both cert and private key to do SSL handshake verification and connect to server
-// 2. gets a signed encrypted message from server and write to temp file signed-msg
-// 3. get encrypted message from signed-msg using cms_verify and CMS_NO_SIGNER_CERT_VERIFY flag to temp file encrypted-msg
-// 4. decrypt encrypted-msg using recipient's private key and write to temp file decrypted-msg
-// 5. parse sender info from decrypted-msg header FROM:
-// 6. send sender name to server /getusercert
-// 7. gets sender cert and write to temp file sender.cert.pem
-// 8. verify sender of signed-message with cms_verify using sender.cert.pem and client's copy of ca-chain
-// 9. write the decrypted message to the specified output file
-// 10. delete temp files (signed-msg, decrypted-msg, sender-chain.cert.pem)
-
 int main(int argc, char *argv[]) {
-    char *certificate = getpass("Enter certificate: ");
+  struct stat st;
+  char *certfile, *keyfile, *msgoutfile, *buffer;
+  char *line = NULL;
+  size_t size = 0;
+  FILE *fp;
+  char *s_certfile = SENDER_CERTIFICATE; 
+  char *unsigned_encrypted_file = UNSIGNED_ENCRYPTED_MSG;
+  char *unsigned_decrypted_file = UNSIGNED_DECRYPTED_MSG;
+  char *signed_encrypted_file = SIGNED_ENCRYPTED_MSG;
 
-// TODO: give both cert and private key to do SSL handshake verification
-    SSL_CTX *ctx;
-    SSL *ssl;
-    const SSL_METHOD *meth; 
-    BIO *sbio;
-    int err; char *s;
+  if (argc != 4) {
+    fprintf(stderr, "bad arg count; usage: recv-msg <cert-file> <key-file> <msg-out-file>\n");
+    return 1;
+  }
+  certfile = argv[1];
+  keyfile = argv[2];
+  msgoutfile = argv[3];
 
-    int ilen;
-    char ibuf[512];
-    
-    struct sockaddr_in sin;
-    int sock;
-    struct hostent *he;
-    SSL_library_init();
-    SSL_load_error_strings();
+  // TODO: Give both cert and private key to do SSL handshake verification
+  /*
+  SSL_CTX *ctx;
+  SSL *ssl;
+  const SSL_METHOD *meth; 
+  BIO *sbio;
+  int err; char *s;
 
-    meth = TLS_client_method();
-	ctx = SSL_CTX_new(meth);
-	SSL_CTX_set_default_verify_dir(ctx);
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+  int ilen;
+  char ibuf[512];
+  
+  struct sockaddr_in sin;
+  int sock;
+  struct hostent *he;
+  SSL_library_init();
+  SSL_load_error_strings();
 
-	ssl = SSL_new(ctx);
-	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (sock < 0) {
-		perror("socket");
-		return 1;
-	}
+  meth = TLS_client_method();
+  ctx = SSL_CTX_new(meth);
+  SSL_CTX_set_default_verify_dir(ctx);
+  SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
 
-    bzero(&sin, sizeof sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(443);
-	he = gethostbyname("");//edit this
+  ssl = SSL_new(ctx);
+  sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (sock < 0) {
+    perror("socket");
+    return 1;
+  }
 
-	memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
-	if (connect(sock, (struct sockaddr *)&sin, sizeof sin) < 0) {
-		perror("connect");
-		return 2;
-	}
-	sbio=BIO_new(BIO_s_socket());
-	BIO_set_fd(sbio, sock, BIO_NOCLOSE);
-	SSL_set_bio(ssl, sbio, sbio);
-	err = SSL_connect(ssl);
+  bzero(&sin, sizeof sin);
+  sin.sin_family = AF_INET;
+  sin.sin_port = htons(443);
+  he = gethostbyname("");//edit this
 
-	if (SSL_connect(ssl) != 1) {
-		switch (SSL_get_error(ssl, err)) {
-			case SSL_ERROR_NONE: s="SSL_ERROR_NONE"; break;
-			case SSL_ERROR_ZERO_RETURN: s="SSL_ERROR_ZERO_RETURN"; break;
-			case SSL_ERROR_WANT_READ: s="SSL_ERROR_WANT_READ"; break;
-			case SSL_ERROR_WANT_WRITE: s="SSL_ERROR_WANT_WRITE"; break;
-			case SSL_ERROR_WANT_CONNECT: s="SSL_ERROR_WANT_CONNECT"; break;
-			case SSL_ERROR_WANT_ACCEPT: s="SSL_ERROR_WANT_ACCEPT"; break;
-			case SSL_ERROR_WANT_X509_LOOKUP: s="SSL_ERROR_WANT_X509_LOOKUP"; break;
-			case SSL_ERROR_WANT_ASYNC: s="SSL_ERROR_WANT_ASYNC"; break;
-			case SSL_ERROR_WANT_ASYNC_JOB: s="SSL_ERROR_WANT_ASYNC_JOB"; break;
-			case SSL_ERROR_SYSCALL: s="SSL_ERROR_SYSCALL"; break;
-			case SSL_ERROR_SSL: s="SSL_ERROR_SSL"; break;
-		}
-		fprintf(stderr, "SSL error: %s\n", s);
-		ERR_print_errors_fp(stderr);
-		return 3;
-	}
+  memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
+  if (connect(sock, (struct sockaddr *)&sin, sizeof sin) < 0) {
+    perror("connect");
+    return 2;
+  }
+  sbio=BIO_new(BIO_s_socket());
+  BIO_set_fd(sbio, sock, BIO_NOCLOSE);
+  SSL_set_bio(ssl, sbio, sbio);
+  err = SSL_connect(ssl);
 
-    //writing stuff with http
-    //GET /HTTP/1.0
+  if (SSL_connect(ssl) != 1) {
+    switch (SSL_get_error(ssl, err)) {
+      case SSL_ERROR_NONE: s="SSL_ERROR_NONE"; break;
+      case SSL_ERROR_ZERO_RETURN: s="SSL_ERROR_ZERO_RETURN"; break;
+      case SSL_ERROR_WANT_READ: s="SSL_ERROR_WANT_READ"; break;
+      case SSL_ERROR_WANT_WRITE: s="SSL_ERROR_WANT_WRITE"; break;
+      case SSL_ERROR_WANT_CONNECT: s="SSL_ERROR_WANT_CONNECT"; break;
+      case SSL_ERROR_WANT_ACCEPT: s="SSL_ERROR_WANT_ACCEPT"; break;
+      case SSL_ERROR_WANT_X509_LOOKUP: s="SSL_ERROR_WANT_X509_LOOKUP"; break;
+      case SSL_ERROR_WANT_ASYNC: s="SSL_ERROR_WANT_ASYNC"; break;
+      case SSL_ERROR_WANT_ASYNC_JOB: s="SSL_ERROR_WANT_ASYNC_JOB"; break;
+      case SSL_ERROR_SYSCALL: s="SSL_ERROR_SYSCALL"; break;
+      case SSL_ERROR_SSL: s="SSL_ERROR_SSL"; break;
+    }
+    fprintf(stderr, "SSL error: %s\n", s);
+    ERR_print_errors_fp(stderr);
+    return 3;
+  }
 
-    return 0;
+  //writing stuff with http
+  //GET /HTTP/1.0
+  */
+
+
+  // TODO: Get signed encrypted message from server and write to temp file signed.encrypted.msg
+  // Error handling:
+      // return -1;
+
+
+  // Get encrypted message from signed.encrypted.msg without verifying and write to temp file unsigned.encrypted.msg
+  if (0 != verifyunsign(signed_encrypted_file, unsigned_encrypted_file)) {
+    // remove(signed_encrypted_file);
+    remove(unsigned_encrypted_file);
+    return -1;
+  }
+
+
+  // Decrypt unsigned.encrypted.msg using recipient's private key and write to temp file unsigned.decrypted.msg
+  if (0 != decryptmsg(certfile, keyfile, unsigned_encrypted_file, unsigned_decrypted_file)) {
+    // remove(signed_encrypted_file);
+    remove(unsigned_encrypted_file);
+    remove(unsigned_decrypted_file);
+    return -1;
+  }
+  remove(unsigned_encrypted_file);
+
+
+  // Get sender name from unsigned.decrypted.msg header
+  fp = fopen(unsigned_decrypted_file, "r");
+  if (!fp) {
+    fprintf(stderr, "%s\n", unsigned_decrypted_file);
+    perror("File open error");
+    remove(unsigned_decrypted_file);
+    // remove(signed_encrypted_file);
+    return -1;
+  }
+
+  regex_t mailfrom;
+  if (0 != regcomp(&mailfrom, MAILFROM_REGEX, REG_EXTENDED | REG_ICASE)) {
+    perror("Regex did not compile successfully");
+    regfree(&mailfrom);
+    fclose(fp);
+    remove(unsigned_decrypted_file);
+    // remove(signed_encrypted_file);
+    return -1;
+  }
+
+  bstring inp = bgets_limit((bNgetc)fgetc, fp, '\n', MB);
+  if (!inp) {
+    perror("Invalid message.");
+    bdestroy(inp);
+    regfree(&mailfrom);
+    fclose(fp);
+    remove(unsigned_decrypted_file);
+    // remove(signed_encrypted_file);
+    return -1;
+  }
+  int ismblong = inp->slen == MB;
+  if (ismblong) {
+    perror("Invalid message.");
+    bdestroy(inp);
+    regfree(&mailfrom);
+    fclose(fp);
+    remove(unsigned_decrypted_file);
+    // remove(signed_encrypted_file);
+    return -1;
+  }
+  regmatch_t mailfrommatch[2];
+  int mailfromtest = regexec(&mailfrom, (char *)inp->data, 2, mailfrommatch, 0);
+  if (mailfromtest == REG_NOMATCH) {
+    perror("Invalid message.");
+    bdestroy(inp);
+    regfree(&mailfrom);
+    fclose(fp);
+    remove(unsigned_decrypted_file);
+    // remove(signed_encrypted_file);
+    return -1;
+  }
+  bstring sender = bmidstr(inp, mailfrommatch[1].rm_so, mailfrommatch[1].rm_eo - mailfrommatch[1].rm_so);
+  bdestroy(inp);
+  regfree(&mailfrom);
+  fclose(fp);
+  remove(unsigned_decrypted_file);
+
+
+  // TODO: Send sender name to server /getusercert
+
+
+
+  // TODO: Get sender cert and write to temp file sender.cert.pem
+  // Error handling:
+    // remove(signed_encrypted_file);
+    // remove(s_certfile);
+    // bdestroy(sender);
+    // return -1;
+
+
+  // TODO: Close connection with server
+  // Error handling:
+    // remove(signed_encrypted_file);
+    // remove(s_certfile);
+    // bdestroy(sender);
+    // return -1;
+
+
+  // Verify sender of signed-message using sender.cert.pem and 
+  // write the decrypted message to the specified output file
+  if (0 != verifysign(s_certfile, signed_encrypted_file, msgoutfile)) {
+    // remove(signed_encrypted_file);
+    // remove(s_certfile);
+    bdestroy(sender);
+    return -1;
+  }
+
+  // remove(signed_encrypted_file);
+  // remove(s_certfile);
+  bdestroy(sender);
+  return 0;
 }

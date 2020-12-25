@@ -8,13 +8,15 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "bstrlib.h"
-#include "utf8util.h"
-#include "buniutil.h"
-#include "bstraux.h"
+
 #include "bsafe.h"
+#include "bstraux.h"
+#include "bstrlib.h"
 #include "bstrlibext.h"
+#include "buniutil.h"
 #include "faramailutils.h"
+#include "utf8util.h"
+#include "utils.h"
 
 #define DEBUG 1
 #define READBUF_SIZE 1000
@@ -27,8 +29,15 @@
   "Connection must be either close or keep-alive\n"
 #define ERR_INSUFFICIENT_CONTENT_SENT \
   "Send more content you stingy fuck nOoo~ you're so sexy aha 😘\n"
+#define ERR_MALFORMED_REQUEST "Your request body was malformed\n"
 
-#define p(...)            \
+#define ERR_BAD_USERNAME (-1)
+#define ERR_WRONG_PASSWORD (-2)
+#define ERR_OPEN (-3)
+#define ERR_PENDING_MSG (-4)
+#define ERR_CERT_EXISTS (-5)
+
+#define pf(...)           \
   if (DEBUG) {            \
     printf("\033[0;34m"); \
     printf("Faramail: "); \
@@ -64,7 +73,7 @@ int parseVerbLine(char *data, struct VerbLine *vl) {
                   "([^[:space:]]+)\n",
                   REG_EXTENDED | REG_ICASE);
   if (value != 0) {
-    p("Regex did not compile successfully\n");
+    pf("Regex did not compile successfully\n");
   }
   regmatch_t match[6];
   int test = regexec(&reg, data, 6, match, 0);
@@ -127,7 +136,7 @@ int parseOptionLine(char *data, struct OptionLine *ol) {
                   "[[:space:]]*(.*)[[:space:]]*:[[:space:]]*(.*)[[:space:]]*\n",
                   REG_EXTENDED | REG_ICASE);
   if (value != 0) {
-    p("Regex did not compile successfully\n");
+    pf("Regex did not compile successfully\n");
   }
   regmatch_t match[3];
   int test = regexec(&reg, data, 3, match, 0);
@@ -187,79 +196,113 @@ void testParsers(int mama, char **moo) {
   struct VerbLine vl;
   char *yeet = "post https://www.rbbridge.com:8080/sendmsg/goodgod HTTP/1.1";
   int result = parseVerbLine(yeet, &vl);
-  p("%d %s\n", result, vl.verb);
-  p("%d %s\n", result, vl.port);
-  p("%d %s\n", result, vl.path);
-  p("%d %s\n", result, vl.version);
+  pf("%d %s\n", result, vl.verb);
+  pf("%d %s\n", result, vl.port);
+  pf("%d %s\n", result, vl.path);
+  pf("%d %s\n", result, vl.version);
 
   struct OptionLine ol;
   char *yeet2 = "connection: keep-alive";
   int result2 = parseOptionLine(yeet2, &ol);
-  p("%d %s\n", result2, ol.header);
-  p("%d %s\n", result2, ol.value);
+  pf("%d %s\n", result2, ol.header);
+  pf("%d %s\n", result2, ol.value);
 }
 
 // caller should allocate MAX_CERT_SIZE bytes to cert
 // cert will be filled with the new certificate contents
 // cert will be written to ca/intermediate/certs/username.cert.pem
-// on success returns the length of the cert
-int handleGetCert(char *cert, bstring busername, bstring bpw, bstring bcsr) {
+// n is the length of the cert
+int handleGetCert(char *cert, bstring busername, bstring bpw, bstring bcsr,
+                  int *n) {
   char *username = (char *)busername->data;
   char *pw = (char *)bpw->data;
   char *csr = (char *)bcsr->data;
-  
+
   int lret = login(username, pw);
   if (lret == 1) {
     fprintf(stderr, "Login failed: bad username\n");
-    return -1;
+    return ERR_BAD_USERNAME;
   } else if (lret == 2) {
     fprintf(stderr, "Login failed: incorrect password\n");
-    return -1;
+    return ERR_WRONG_PASSWORD;
   }
   printf("Login successful\n");
   if (addcsr(csr, username) == -1) {
     fprintf(stderr, "Could not generate certificate\n");
-    return -1;
+    return ERR_OPEN;
   }
-  return getcert(cert, username, 0);
+  int ret = getcert(cert, username, n, 0);
+  if (ret == -1) {
+    fprintf(stderr, "Could not generate certificate\n");
+    return ERR_OPEN;
+  } else if (ret == 1) {
+    return ERR_CERT_EXISTS;
+  } else {
+    return 0;
+  }
 }
 
 // caller should allocate MAX_CERT_SIZE bytes to cert
 // change password only if mailbox is empty
 // cert will be filled with the new certificate contents
 // cert will be written to ca/intermediate/certs/username.cert.pem
-// on success returns the length of the cert
-int handleChangePw(char *cert, bstring busername, bstring boldpw, bstring bnewpw, bstring bcsr) {
+// n is the length of the cert
+int handleChangePw(char *cert, bstring busername, bstring boldpw,
+                   bstring bnewpw, bstring bcsr, int *n) {
   char *username = (char *)busername->data;
   char *oldpw = (char *)boldpw->data;
   char *newpw = (char *)bnewpw->data;
   char *csr = (char *)bcsr->data;
-  
+
   int lret = login(username, oldpw);
   if (lret == 1) {
     fprintf(stderr, "Login failed: bad username\n");
-    return -1;
+    return ERR_BAD_USERNAME;
   } else if (lret == 2) {
     fprintf(stderr, "Login failed: incorrect password\n");
-    return -1;
+    return ERR_WRONG_PASSWORD;
   }
   int cret = checkmail(username);
   if (cret == 1) {
     fprintf(stderr, "Error checking mailbox. Password not changed.\n");
-    return -1;
+    return ERR_OPEN;
   } else if (cret == 2) {
     fprintf(stderr, "Mailbox is not empty. Password not changed.\n");
-    return -1;
+    return ERR_PENDING_MSG;
   }
   if (changepw(username, newpw) != 0) {
     fprintf(stderr, "Error changing password\n");
-    return -1;
+    return ERR_OPEN;
   }
   if (addcsr(csr, username) == -1) {
     fprintf(stderr, "Could not generate certificate\n");
-    return -1;
+    return ERR_OPEN;
   }
-  return getcert(cert, username, 1);
+  int ret = getcert(cert, username, n, 1);
+  if (ret == -1) {
+    fprintf(stderr, "Could not generate certificate\n");
+    return ERR_OPEN;
+  } else if (ret == 1) {
+    return ERR_CERT_EXISTS;
+  } else {
+    return 0;
+  }
+}
+
+void sendGood(SSL *ssl, int connection, void *content, int code) {
+  bstring toSend = bformat("%d OK\nconnection: %s\ncontent-length: %d\n\n%s\n",
+                           code, connection == 2 ? "close" : "keep-alive",
+                           strlen(content) + 1, content);
+  SSL_write(ssl, toSend->data, toSend->slen);
+  bdestroy(toSend);
+}
+
+void sendBad(SSL *ssl, void *content) {
+  bstring toSend =
+      bformat("400 Bad Request \nconnection: close\ncontent-length: %d\n\n%s\n",
+              strlen(content) + 1, content);
+  SSL_write(ssl, toSend->data, toSend->slen);
+  bdestroy(toSend);
 }
 
 // Refer to:
@@ -308,7 +351,7 @@ int main(int mama, char **moo) {
       exit(EXIT_FAILURE);
     }
 
-    p("Connection from %x, port %x\n", addr.sin_addr.s_addr, addr.sin_port);
+    pf("Connection from %x, port %x\n", addr.sin_addr.s_addr, addr.sin_port);
 
     SSL_set_fd(ssl, client);
 
@@ -336,7 +379,12 @@ int main(int mama, char **moo) {
     int state = 0;
 
     /*
-     * Set by an option line
+     * Only one verb line
+     */
+    struct VerbLine vl;
+
+    /*
+     * Set by a verb line
      * ===
      * -1 Unset
      * 1 Get
@@ -345,14 +393,14 @@ int main(int mama, char **moo) {
     int action = -1;
 
     /*
-     * Set by a verb line
+     * Set by an option line
      * ===
      * -1 Unset
      */
     int contentLength = -1;
 
     /*
-     * Set by a verb line. Default to close
+     * Set by an option line. Default to close
      * ===
      * 1 keep-alive
      * 2 close
@@ -364,15 +412,14 @@ int main(int mama, char **moo) {
     while (1) {
       memset(rbuf, '\0', sizeof(rbuf));
       int readReturn = SSL_read(ssl, rbuf, sizeof(rbuf) - 1);
-      p("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
+      pf("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
       if (readReturn == 0) {
-        p("0 bytes read\n");
+        pf("0 bytes read\n");
         break;
       } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
         SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
         break;
       } else if (state == 0) {
-        struct VerbLine vl;
         int result = parseVerbLine(rbuf, &vl);
         if (result == 2) {
           SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
@@ -437,10 +484,10 @@ int main(int mama, char **moo) {
           break;
         }
 
-        data = (char *)malloc(contentLength);
+        data = (char *)malloc(contentLength + 1);
         memset(data, '\0', contentLength);
 
-        // p("%ld %ld %s\n", strlen(rbuf), sizeof(rbuf), rbuf);
+        // pf("%ld %ld %s\n", strlen(rbuf), sizeof(rbuf), rbuf);
         memcpy(data, rbuf, strlen(rbuf));
         int contentReceived = strlen(rbuf);
 
@@ -507,8 +554,181 @@ int main(int mama, char **moo) {
          yeet
 
          */
-        p("state: %d\naction: %d\ncontentLength: %d\nconnection: %d\n%s\n",
-          state, action, contentLength, connection, data);
+        pf("state: %d\naction: %d\ncontentLength: %d\nconnection: %d\n%s\n",
+           state, action, contentLength, connection, data);
+
+        bstring bdata = bfromcstr(data);
+
+        int code = 200;
+
+        bstring path = bfromcstr(vl.path);
+        if (action == 2 && bstrccmp(path, "/getcert") == 0) {
+          struct bstrList *lines = bsplit(bdata, '\n');
+          if (lines->qty != 4) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+
+          bstring usernamekey = bfromcstr("");
+          bstring usernamevalue = bfromcstr("");
+          bstring passwordkey = bfromcstr("");
+          bstring passwordvalue = bfromcstr("");
+          bstring csrkey = bfromcstr("");
+          bstring csrvalue = bfromcstr("");
+          if (deserializeData(usernamekey, usernamevalue, lines->entry[0], 0) !=
+                  0 ||
+              deserializeData(passwordkey, passwordvalue, lines->entry[1], 0) !=
+                  0 ||
+              deserializeData(csrkey, csrvalue, lines->entry[2], 1) != 0 ||
+              bstrccmp(usernamekey, "username") != 0 ||
+              bstrccmp(passwordkey, "password") != 0 ||
+              bstrccmp(csrkey, "csr") != 0) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
+            bdestroy(usernamekey);
+            bdestroy(usernamevalue);
+            bdestroy(passwordkey);
+            bdestroy(passwordvalue);
+            bdestroy(csrkey);
+            bdestroy(csrvalue);
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+          char cert[MAX_CERT_SIZE];
+
+          memset(cert, '\0', sizeof(cert));
+          int certLen;
+          int r = handleGetCert(cert, usernamevalue, passwordvalue, csrvalue,
+                                &certLen);
+
+          if (r != 0 && r != -5) {
+            bstring err = bformat("Handler returned with error %d\n", r);
+            sendBad(ssl, err->data);
+            bdestroy(err);
+            bdestroy(usernamekey);
+            bdestroy(usernamevalue);
+            bdestroy(passwordkey);
+            bdestroy(passwordvalue);
+            bdestroy(csrkey);
+            bdestroy(csrvalue);
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          } else if (r == -5) {
+            code = 201;
+          }
+
+          bstring certKey = bfromcstr("certificate");
+          bstring certValue = bfromcstr(cert);
+          bstring certData = bfromcstr("");
+          if (serializeData(certKey, certValue, certData, 1) != 0) {
+            bdestroy(certKey);
+            bdestroy(certValue);
+            bdestroy(certData);
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
+            connection = 2;
+            goto cleanup;
+          };
+          bdestroy(certKey);
+          bdestroy(certValue);
+          sendGood(ssl, 2, certData->data, code);
+          bdestroy(certData);
+
+        } else if (action == 2 && bstrccmp(path, "/changepw") == 0) {
+          struct bstrList *lines = bsplit(bdata, '\n');
+          if (lines->qty != 5) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+          bstring usernamekey = bfromcstr("");
+          bstring usernamevalue = bfromcstr("");
+          bstring passwordkey = bfromcstr("");
+          bstring passwordvalue = bfromcstr("");
+          bstring newpasswordkey = bfromcstr("");
+          bstring newpasswordvalue = bfromcstr("");
+          bstring csrkey = bfromcstr("");
+          bstring csrvalue = bfromcstr("");
+
+          if (deserializeData(usernamekey, usernamevalue, lines->entry[0], 0) !=
+                  0 ||
+              deserializeData(passwordkey, passwordvalue, lines->entry[1], 0) !=
+                  0 ||
+              deserializeData(newpasswordkey, newpasswordvalue, lines->entry[2],
+                              0) != 0 ||
+              deserializeData(csrkey, csrvalue, lines->entry[3], 1) != 0 ||
+              bstrccmp(usernamekey, "username") != 0 ||
+              bstrccmp(passwordkey, "password") != 0 ||
+              bstrccmp(newpasswordkey, "newpassword") != 0 ||
+              bstrccmp(csrkey, "csr") != 0) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
+            bdestroy(usernamekey);
+            bdestroy(usernamevalue);
+            bdestroy(passwordkey);
+            bdestroy(passwordvalue);
+            bdestroy(newpasswordkey);
+            bdestroy(newpasswordvalue);
+            bdestroy(csrkey);
+            bdestroy(csrvalue);
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+          char cert[MAX_CERT_SIZE];
+          memset(cert, '\0', sizeof(cert));
+          int certLen;
+          int r;
+          if ((r = handleChangePw(cert, usernamevalue, passwordvalue,
+                                  newpasswordvalue, csrvalue, &certLen)) != 0) {
+            bstring err = bformat("Handler returned with error %d\n", r);
+            sendBad(ssl, err->data);
+            bdestroy(err);
+            bdestroy(usernamekey);
+            bdestroy(usernamevalue);
+            bdestroy(passwordkey);
+            bdestroy(passwordvalue);
+            bdestroy(newpasswordkey);
+            bdestroy(newpasswordvalue);
+            bdestroy(csrkey);
+            bdestroy(csrvalue);
+            bstrListDestroy(lines);
+            connection = 2;
+            goto cleanup;
+          }
+
+          bstring certKey = bfromcstr("certificate");
+          bstring certValue = bfromcstr(cert);
+          bstring certData = bfromcstr("");
+
+          if (serializeData(certKey, certValue, certData, 1) != 0) {
+            bdestroy(certKey);
+            bdestroy(certValue);
+            bdestroy(certData);
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
+            connection = 2;
+            goto cleanup;
+          };
+
+          bdestroy(certKey);
+          bdestroy(certValue);
+          sendGood(ssl, 2, certData->data, code);
+
+          bdestroy(certData);
+        } else {
+          sendBad(ssl, ERR_MALFORMED_REQUEST);
+          connection = 2;
+        }
+
+      cleanup:
+        bdestroy(bdata);
+        bdestroy(path);
 
         //
 
