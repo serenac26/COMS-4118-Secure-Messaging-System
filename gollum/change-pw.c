@@ -26,6 +26,8 @@
 //./change-pw <username> <privatekeyfile> 
 int main(int argc, char *argv[]) {
 
+    printf("%d\n", getgid());
+    printf("%d\n", getegid());
     if (argc != 3) {
         fprintf(stderr, "bad arg count; usage: change-pw <username> <key-file>\n");
 		return 1;
@@ -41,17 +43,20 @@ int main(int argc, char *argv[]) {
         printf("input too large: must be 32 or less characters\n");
     }
 
-    char *tempfile = "temp.txt";
+    char *tempfile = "../tmp/temp.txt";
     int pid, wpid;
     int status = 0;
     pid = fork();
     //CHANGE int config and directory 
     if (pid == 0) {
-        execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username, argv[2], tempfile, (char *)NULL);
+        char *args[6] = {"makecsr.sh", "../imopenssl.cnf", username, argv[2], tempfile, (char *)NULL};
+        execv("./makecsr.sh", args);
+        fprintf(stderr, "execv failed\n");
+        return 1;
     }
     while ((wpid = wait(&status)) > 0);
     FILE *temp; 
-    temp = fopen("temp.txt", "r+");
+    temp = fopen(tempfile, "r+");
     fseek(temp, 0, SEEK_END);
     long fsize1 = ftell(temp);
     fseek(temp, 0, SEEK_SET);
@@ -59,7 +64,7 @@ int main(int argc, char *argv[]) {
     char *csr = malloc(fsize1 + 1);
     fread(csr, 1, fsize1, temp);
     fclose(temp);
-    remove("temp.txt");
+    remove(tempfile);
 
     SSL_CTX *ctx;
 	SSL *ssl;

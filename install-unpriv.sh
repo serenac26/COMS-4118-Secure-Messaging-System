@@ -20,6 +20,7 @@ mkdir $im/certs $im/csr $im/newcerts $im/private
 for f in /home/mailbox/*; do
     cred="$(python3 $pwd/crypt-pw.py ${f:14})"
     credarray=($cred)
+	echo "$cred" >> creds.txt
     printf "${credarray[1]}" >> server/credentials/${f:14}.hashedpw
 done
 
