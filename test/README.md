@@ -1,7 +1,7 @@
 # Tests 
 
 ## Run Tests
-`sudo rm -rf <tree> && make clean && make install TREE=<tree>`
+`sudo rm -rf <tree> && make clean && make install-test TREE=<tree>`
 
 In one shell:
 ```
