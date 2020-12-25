@@ -21,8 +21,8 @@ Meribuck "Harrison Wang" Brandybuck (hbw2118)
 `./genkey.sh <key output file> [password]` 
 `./getcert <username> <private-key-file>`
 `./changepw <username> <private-key-file>`
-`./sendmsg <certificate-file> <private-key-file> <message-file>`
-`./recvmsg <certificate-file> <private-key-file>`
+`./sendmsg <certificate-file> <private-key-file> <message-input-file>`
+`./recvmsg <certificate-file> <private-key-file> <message-output-file>`
 
 ### Terminate server:
 To safely terminate the server, send an HTTP post request to it via an OpenSSL client with the keyword 'die'. For example:
