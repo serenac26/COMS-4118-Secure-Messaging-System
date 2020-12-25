@@ -23,8 +23,8 @@ sudo ./pemithor
 ```
 cd <treename>/client/bin
 ./genkey.sh <private-key-output-file> [password]
-./getcert <username> <private-key-file>
-./changepw <username> <private-key-file>
+./getcert <username> <private-key-file> <cert-out-file>
+./changepw <username> <private-key-file> <cert-out-file>
 ./sendmsg <certificate-file> <private-key-file> <message-input-file>
 ./recvmsg <certificate-file> <private-key-file> <message-output-file>
 ```
