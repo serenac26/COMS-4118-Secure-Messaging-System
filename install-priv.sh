@@ -20,6 +20,7 @@ chmod g=r,o=r $1/client/*.cnf $1/client/*.cert.pem
 chmod -R u=rwx,g=rs,o=x $1/client/bin
 chmod u=rwx,g=rx,o=rx $1/client $1/client/bin
 chmod o=rx $1/client/bin/*.sh
+chmod -R u=rwx,g=rwx,o= $1/client/tmp
 
 chmod u+x $1/server/bin/*.sh
 chmod +x $1/client/bin/*.sh

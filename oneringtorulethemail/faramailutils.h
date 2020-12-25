@@ -9,6 +9,6 @@ int changepw(char *username, char *pw);
 
 int addcsr(char *csr, char *username);
 
-int getcert(char *cert, char *username, int revoke);
+int getcert(char *cert, char *username, int *n, int revoke);
 
 #endif
