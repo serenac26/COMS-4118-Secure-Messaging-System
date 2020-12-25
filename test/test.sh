@@ -45,19 +45,15 @@ testfunctionality1 () {
     msgout=msg1out.txt
 
     echo "$A and $B generate private keys and certificates"
-    ./genkey.sh $keyA $keypass
-    ./getcert $A $keyA
+    ./genkey.sh $keyA $keypass $certA
+    ./getcert $A $keyA 
     # expect $pwprompt
     # send -- "$pass\r"
-    # expect $certprompt
-    # send -- "$certA\n"
 
     ./genkey.sh $keyB $keypass
-    ./getcert $B $keyB
+    ./getcert $B $keyB $certB
     # expect $pwprompt
     # send -- "$pass\r"
-    # expect $certprompt
-    # send -- "$certB\n"
 
     echo "___________________________________________________________________________"
 
@@ -73,11 +69,9 @@ testfunctionality1 () {
     echo "___________________________________________________________________________"
 
     echo "$B receives message from $A"
-    ./recvmsg $certB $keyB
+    ./recvmsg $certB $keyB $tmp/$msgout
     # expect $keypassprompt
     # send -- "$keypass\r"
-    # expect $msgoutprompt
-    # send -- "$tmp/$msgout\n"
     if [ ! -f "$tmp/$msgout" ]; then
         echo "Error: received message not written to path"
         rm -f $msg $msgout; return 1
@@ -103,25 +97,23 @@ testfunctionality2 () {
 
     echo "$A generates new private key and changes password to get a new certificate"
     ./genkey.sh new$keyA $keypass
-    ./changepw $A new$keyA
+    ./changepw $A new$keyA new$certA
     # expect $pwprompt
     # send -- "$pass\r"
     # expect $newpwprompt
     # send -- "new$pass\r"
-    # expect $certprompt
-    # send -- "new$certA\n"
 
     echo "___________________________________________________________________________"
 
     echo "$A tries to login with old pw; # expect login failure"
-    ./getcert $A $keyA
+    ./getcert $A $keyA $tmp/blah
     # expect $pwprompt
     # send -- "$pass\r"
 
     echo "___________________________________________________________________________"
 
     echo "$A tries to login with new pw; # expect success with certificate already exists message"
-    ./getcert $A $keyA
+    ./getcert $A $keyA $tmp/blah
     # expect $pwprompt
     # send -- "new$pass\r"
 
@@ -139,7 +131,7 @@ testfunctionality2 () {
     echo "___________________________________________________________________________"
 
     echo "$B tries to receive message from $A; # expect client signature verification to fail"
-    ./recvmsg $certB $keyB
+    ./recvmsg $certB $keyB $tmp/blah
     # expect $keypassprompt
     # send -- "$keypass\r"
     if [ -f "$mail/$B/00001" ]; then
@@ -161,11 +153,9 @@ testfunctionality2 () {
     echo "___________________________________________________________________________"
 
     echo "$B receives message from $A; # expect success"
-    ./recvmsg $certB $keyB
+    ./recvmsg $certB $keyB $tmp/$msgout
     # expect $keypassprompt
     # send -- "$keypass\r"
-    # expect $msgoutprompt
-    # send -- "$tmp/$msgout\r"
     if [ ! -f "$tmp/$msgout" ]; then
         echo "Error: received message not written to path"
         rm -f $msg $msgout; return 1
@@ -195,11 +185,9 @@ testfunctionality3 () {
     echo "___________________________________________________________________________"
 
     echo "$A getcert with new private key; # expect login success with certificate already exists message"
-    ./getcert $A newnew$keyA
+    ./getcert $A newnew$keyA newnew$certA
     # expect $pwprompt
     # send -- "new$pass\r"
-    # expect $certprompt
-    # send -- "newnew$certA\r"
     if [ $(diff new$certA newnew$certA) != "" ]; then
         echo "Error: getcert generated a new certificate"
         rm -f $msg $msgout; return 1
@@ -220,11 +208,9 @@ testfunctionality3 () {
     echo "___________________________________________________________________________"
 
     echo "$B receives message from $A; # expect success"
-    ./recvmsg $certB $keyB
+    ./recvmsg $certB $keyB $tmp/$msgout
     # expect $keypassprompt
     # send -- "$keypass\r"
-    # expect $msgoutprompt
-    # send -- "$tmp/$msgout\r"
     if [ ! -f "$tmp/$msgout" ]; then
         echo "Error: received message not written to path"
         rm -f $msg $msgout; return 1
@@ -258,7 +244,7 @@ testfunctionality4 () {
     fi
 
     echo "$B tries to change password; # expect pending messages failure"
-    ./changepw $B $keyB
+    ./changepw $B $keyB $tmp/blah
     # expect $pwprompt
     # send -- "$pass\r"
     # expect $newpwprompt
@@ -275,18 +261,16 @@ testfunctionality5 () {
     # revert pw to original and overwrite original key and cert 
     echo "$A generates new private key and changes password to get a new certificate"
     ./genkey.sh $keyA $keypass
-    ./changepw $A $keyA
+    ./changepw $A $keyA $certA
     # expect $pwprompt
     # send -- "new$pass\r"
     # expect $newpwprompt
     # send -- "$pass\r"
-    # expect $certprompt
-    # send -- "$certA\n"
 
     echo "___________________________________________________________________________"
 
     echo "$B tries to receive message from $A; # expect client signature verification to fail"
-    ./recvmsg $certB $keyB
+    ./recvmsg $certB $keyB $tmp/blah
     # expect $keypassprompt
     # send -- "$keypass\r"
     if [ -f "$mail/$B/00001" ]; then
@@ -407,11 +391,9 @@ testimpersonation () {
 
     echo "$C generates a private key and gets a certificate"
     ./genkey.sh $keyC $keypass
-    ./getcert $C $keyC
+    ./getcert $C $keyC $certC
     # expect $pwprompt
     # send -- "$pass\r"
-    # expect $certprompt
-    # send -- "$certC\n"
 
     echo "___________________________________________________________________________"
 
@@ -427,7 +409,7 @@ testimpersonation () {
     echo "___________________________________________________________________________"
 
     echo "$C tries to receive message sent by $A posing as $B; # expect client signature verification to fail"
-    ./recvmsg $certC $keyC
+    ./recvmsg $certC $keyC $tmp/blah
     # expect $keypassprompt
     # send -- "$keypass\r"
     if [ -f "$mail/$C/00001" ]; then
