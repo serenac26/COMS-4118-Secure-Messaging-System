@@ -23,7 +23,7 @@
 
 //./get-cert <username> <privatekeyfile>
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
+    if (argc != 3) {
         fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file\n");
     }
     char *username = argv[1];
@@ -34,27 +34,17 @@ int main(int argc, char *argv[]) {
     }
 
     char *privatekeyfile = argv[2];
-    FILE *fp;
-    fp = fopen(privatekeyfile, "r+");
-    fseek(fp, 0, SEEK_END);
-    long fsize = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
 
-    char *privatekey = malloc(fsize + 1);
-    fread(privatekey, 1, fsize, fp);
-    fclose(fp);
-    privatekey[fsize] = 0;
-    
     char *tempfile = "temp.txt";
     int pid, wpid;
     int status = 0;
     pid = fork();
     if (pid == 0) {
-        execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username, privatekey, tempfile);
+        execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username, privatekeyfile, tempfile);
     }
     while ((wpid = wait(&status)) > 0);
     FILE *temp;
-    temp = fopen("temp.txt", "r+");
+    temp = fopen(tempfile, "r+");
     fseek(temp, 0, SEEK_END);
     long fsize1 = ftell(temp);
     fseek(temp, 0, SEEK_SET);
@@ -90,8 +80,8 @@ int main(int argc, char *argv[]) {
 
     bzero(&sin, sizeof sin);
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(443);
-	he = gethostbyname("localhost");//edit this
+	sin.sin_port = htons(4200);
+	he = gethostbyname("localhost");
 
 	memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
 	if (connect(sock, (struct sockaddr *)&sin, sizeof sin) < 0) {
@@ -145,10 +135,12 @@ int main(int argc, char *argv[]) {
     sprintf(csrLine, "csr:%s\n", csr);
 
     bstring tempstring = bfromcstr(csrLine);
-    encodeMessage(tempstring);
-    char *encodedCsrLine = tempstring->data;
+    bstring bkey = bfromcstr("");
+    bstring bvalue = bfromcstr("");
+    serializeData(gkey, bvalue, tempstring, 1);
+    char *encodedCsrLine = bvalue->data;
     bdestroy(tempstring);
-
+    
     int contentLength = strlen(usernameLine) + strlen(passwordLine) + strlen(encodedCsrLine) + 1;
     sprintf(header3, "content-length: %d\n", contentLength);
     sprintf(buffer, "%s%s%s%s%s%s%s%s", header, header2, header3, "\n", usernameLine, passwordLine, encodedCsrLine, "\n");
@@ -157,7 +149,7 @@ int main(int argc, char *argv[]) {
     printf("Enter a path for cert: \n");
     char ibuf[1000];
     memset(ibuf, '\0', sizeof(ibuf));
-    char certif[1000];
+    char certif[bytes];
     certif[0] = '\0';
     int state = 0;
     char writePath[100];
@@ -174,7 +166,24 @@ int main(int argc, char *argv[]) {
         } else if ((strstr(ibuf, "400") != NULL) && (state == 0)){
             printf("Error 400: Problem with username, password or key.");
             break;
-        } else if ((state == 1) && (ibuf[0] == '\n')) {
+        } else if ((strstr(ibuf, "-2") != NULL) && (state == 0)) {
+            printf("Error -2: Wrong Password");
+            break;
+        }
+        else if ((strstr(ibuf, "-1") != NULL) && (state == 0)) {
+            printf("Error -1: Bad Username");
+            break;
+        }
+        else if ((strstr(ibuf, "-3") != NULL) && (state == 0)) {
+            printf("Error -3: Opening file or directory error")
+        }
+       else if ((strstr(ibuf, "-5") != NULL) && (state == 0)) {
+            printf("Warning: Certificate exists already!");
+            printf("Enter a path for cert: \n");
+            scanf("%s", writePath);
+            state = 1;
+        } 
+        else if ((state == 1) && (ibuf[0] == '\n')) {
             state = 2;
         } else if ((state == 2) && (ibuf[0] != '\n')) {
             sprintf(certif+strlen(certif), ibuf);
@@ -183,17 +192,26 @@ int main(int argc, char *argv[]) {
         }
     }
     if ((state == 2) && (certif != NULL)) {
-        bstring temp = bfromcstr(certif);
-        decodeMessage(temp);
+        bstring temp1 = bfromcstr(certif);
+        bstring bkey1 = bfromcstr("");
+        bstring bvalue1 = bfromcstr("");
+        deserializeData(bkey1, bvalue1, temp1, 1);
         resultCertif = temp->data;
         FILE *fp;
         fp = fopen(writePath, "w+");
         fputs(resultCertif, fp);
         fclose(fp);
         printf("Wrote certification to: %s\n", writePath);
+        bdestroy(bkey1);
+        bdestroy(bvalue1);
+        bdestroy(temp1);
     }
 
     free(privatekey);
     free(csr);
+    free(buffer);
+    free(sbio);
+    bdestroy(bkey);
+    bdestroy(bvalue);
     return 0;
 }
