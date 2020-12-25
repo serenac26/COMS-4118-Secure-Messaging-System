@@ -54,8 +54,6 @@ testfunctionality1 () {
 
     echo "$A and $B generate private keys and certificates"
     ./genkey.sh $keyA $keypass
-    echo "pw=$pass"
-    echo "cert=$certA"
     ./getcert $A $keyA
     # expect $pwprompt
     # send -- "$pass\r"

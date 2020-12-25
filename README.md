@@ -25,7 +25,14 @@ Meribuck "Harrison Wang" Brandybuck (hbw2118)
 `./recvmsg <certificate-file> <private-key-file>`
 
 ### Terminate server:
-TODO
+To safely terminate the server, send an HTTP post request to it via an OpenSSL client with the keyword 'die'. For example:
+```
+post https://localhost:4200/getcert die
+connection: close
+content-length: 0
+
+```
+Otherwise, you can CTRL-C the server process directly, however, this will likely result in memory leaks.
 
 ## Testing
 
