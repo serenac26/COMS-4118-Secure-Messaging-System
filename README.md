@@ -52,10 +52,6 @@ rcpt to:<recipient2>
 but it is still included in the body of the message
 ```
 
-## TODO:
-uncomment line "# chown -hR root:root \$1/server" in install-priv.sh
-remove line "echo "$cred" >> creds.txt" in install-unpriv.sh
-
 ## Design Documentation
 need to convert to markdown
 https://docs.google.com/document/d/1J0lWIIuWZit5dgo3vR-ZorzSi4Fs7MPWzHYjdcN2mhU/edit?usp=sharing
