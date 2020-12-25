@@ -4,7 +4,7 @@
 
 groupadd -f ring
 
-# chown -hR root:root $1/server
+chown -hR root:root $1/server
 chown -hR root:ring $1/client
 
 chmod -R u=rw,g=,o= $1/server
