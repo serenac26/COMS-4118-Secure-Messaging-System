@@ -141,7 +141,7 @@ int getOldestFilename(bstring recip, bstring filename) {
 // int main(int argc, char *argv[]) {
 //     char *op;
 //     if (argc < 2) {
-//         fprintf(stderr, "bad arg count; usage: boromailutils <operation>\nsupported operations: getusercert sendmsg recvmsg");
+//         fprintf(stderr, "bad arg count; usage: boromailutils <operation>\nsupported operations: getusercert sendmsg recvmessage");
 //         return 1;
 //     }
 //     op = argv[1];
@@ -184,16 +184,16 @@ int getOldestFilename(bstring recip, bstring filename) {
 //         return 0;
 //     }
 
-//     if (strcmp(op, "recvmsg") == 0) {
+//     if (strcmp(op, "recvmessage") == 0) {
 //         char *msgfile;
 //         char *msgout;
 
 //         if (argc != 3) {
-//             fprintf(stderr, "bad arg count; usage: boromailutils recvmsg <msgfile>\n");
+//             fprintf(stderr, "bad arg count; usage: boromailutils recvmessage <msgfile>\n");
 //             return 1;
 //         }
 //         msgfile = argv[2];
-//         int value = recvmsg(msgfile, &msgout);
+//         int value = recvmessage(msgfile, &msgout);
 //         printf("%s", msgout);
 //         free(msgout);
 //         return value;
