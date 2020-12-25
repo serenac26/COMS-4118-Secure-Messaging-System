@@ -1,216 +1,238 @@
-#include <stdio.h>
-#include <strings.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 #include <arpa/inet.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/wait.h>
-
-#include "bstrlib.h"
-#include "utf8util.h"
-#include "bstraux.h"
-#include "bsafe.h"
-#include "bstrlibext.h"
-#include "utils.h"
-
-#include <openssl/ssl.h>
+#include <netdb.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
+#include <openssl/ssl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include "bsafe.h"
+#include "bstraux.h"
+#include "bstrlib.h"
+#include "bstrlibext.h"
+#include "utf8util.h"
+#include "utils.h"
+
+int create_socket(int port) {
+  int s;
+  struct sockaddr_in addr;
+
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(port);
+  addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+  s = socket(AF_INET, SOCK_STREAM, 0);
+  if (s < 0) {
+    perror("Unable to create socket");
+    exit(EXIT_FAILURE);
+  }
+
+  int err = connect(s, (struct sockaddr *)&addr, sizeof(addr));
+  if (err < 0) {
+    perror("Error connecting");
+    exit(EXIT_FAILURE);
+  }
+
+  return s;
+}
 
 //./get-cert <username> <privatekeyfile>
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file\n");
-    }
-    char *username = argv[1];
-    char *password = getpass("Enter password: ");
+  if (argc != 3) {
+    fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file\n");
+  }
+  char *username = argv[1];
+  char *password = getpass("Enter password: ");
 
-    if ((strlen(username) > 32 ) || (strlen(password)>32)) {
-        printf("input too large: must be 32 or less characters\n");
-    }
+  if ((strlen(username) > 32) || (strlen(password) > 32)) {
+    printf("input too large: must be 32 or less characters\n");
+  }
 
-    char *privatekeyfile = argv[2];
+  char *privatekeyfile = argv[2];
 
-    char *tempfile = "temp.txt";
-    int pid, wpid;
-    int status = 0;
-    pid = fork();
-    if (pid == 0) {
-        execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username, privatekeyfile, tempfile);
-    }
-    while ((wpid = wait(&status)) > 0);
-    FILE *temp;
-    temp = fopen(tempfile, "r+");
-    fseek(temp, 0, SEEK_END);
-    long fsize1 = ftell(temp);
-    fseek(temp, 0, SEEK_SET);
+  char *tempfile = "temp.txt";
+  int pid, wpid;
+  int status = 0;
+  pid = fork();
+  if (pid == 0) {
+    execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username,
+          privatekeyfile, tempfile, '\0');
+  }
+  if ((wpid = wait(&status)) < 0)
+		exit(1);
+  FILE *temp;
+  temp = fopen(tempfile, "r+");
+  fseek(temp, 0, SEEK_END);
+  long fsize1 = ftell(temp);
+  fseek(temp, 0, SEEK_SET);
 
-    char *csr = malloc(fsize1 + 1);
-    fread(csr, 1, fsize1, temp);
-    fclose(temp);
-    remove("temp.txt");
+  char *csr = malloc(fsize1 + 1);
+  fread(csr, 1, fsize1, temp);
+  fclose(temp);
+  remove("temp.txt");
 
-    SSL_CTX *ctx;
-    SSL *ssl;
-    const SSL_METHOD *meth; 
-    BIO *sbio;
-    int err; char *s;
+  // SSL handshake verification
 
-    struct sockaddr_in sin;
-    int sock;
-    struct hostent *he;
-    SSL_library_init();
-    SSL_load_error_strings();
+  SSL_library_init();       /* load encryption & hash algorithms for SSL */
+  SSL_load_error_strings(); /* load the error strings for good error reporting
+                             */
 
-    meth = TLS_client_method();
-	ctx = SSL_CTX_new(meth);
-	SSL_CTX_set_default_verify_dir(ctx);
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+  // TLSv1_1_server_method is deprecated
+  // Can switch back if inconvenient
+  const SSL_METHOD *mamamethod = TLS_client_method();
+  SSL_CTX *ctx = SSL_CTX_new(mamamethod);
 
-	ssl = SSL_new(ctx);
-	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (sock < 0) {
-		perror("socket");
-		return 1;
-	}
+  // Only accept the LATEST and GREATEST in TLS
+  SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
+  SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
 
-    bzero(&sin, sizeof sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(4200);
-	he = gethostbyname("localhost");
+  //   if (SSL_CTX_use_certificate_file(ctx, certfile, SSL_FILETYPE_PEM) != 1) {
+  //     ERR_print_errors_fp(stderr);
+  //     exit(EXIT_FAILURE);
+  //   }
 
-	memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
-	if (connect(sock, (struct sockaddr *)&sin, sizeof sin) < 0) {
-		perror("connect");
-		return 2;
-	}
-	sbio=BIO_new(BIO_s_socket());
-	BIO_set_fd(sbio, sock, BIO_NOCLOSE);
-	SSL_set_bio(ssl, sbio, sbio);
-	err = SSL_connect(ssl);
+  //   // TODO: need to input password
+  //   if (SSL_CTX_use_PrivateKey_file(ctx, keyfile, SSL_FILETYPE_PEM) != 1) {
+  //     ERR_print_errors_fp(stderr);
+  //     exit(EXIT_FAILURE);
+  //   }
 
-	if (SSL_connect(ssl) != 1) {
-		switch (SSL_get_error(ssl, err)) {
-			case SSL_ERROR_NONE: s="SSL_ERROR_NONE"; break;
-			case SSL_ERROR_ZERO_RETURN: s="SSL_ERROR_ZERO_RETURN"; break;
-			case SSL_ERROR_WANT_READ: s="SSL_ERROR_WANT_READ"; break;
-			case SSL_ERROR_WANT_WRITE: s="SSL_ERROR_WANT_WRITE"; break;
-			case SSL_ERROR_WANT_CONNECT: s="SSL_ERROR_WANT_CONNECT"; break;
-			case SSL_ERROR_WANT_ACCEPT: s="SSL_ERROR_WANT_ACCEPT"; break;
-			case SSL_ERROR_WANT_X509_LOOKUP: s="SSL_ERROR_WANT_X509_LOOKUP"; break;
-			case SSL_ERROR_WANT_ASYNC: s="SSL_ERROR_WANT_ASYNC"; break;
-			case SSL_ERROR_WANT_ASYNC_JOB: s="SSL_ERROR_WANT_ASYNC_JOB"; break;
-			case SSL_ERROR_SYSCALL: s="SSL_ERROR_SYSCALL"; break;
-			case SSL_ERROR_SSL: s="SSL_ERROR_SSL"; break;
-		}
-		fprintf(stderr, "SSL error: %s\n", s);
-		ERR_print_errors_fp(stderr);
-		return 3;
-	}
+  //   if (SSL_CTX_load_verify_locations(ctx, CA_CHAIN, NULL) != 1) {
+  //     ERR_print_errors_fp(stderr);
+  //     exit(EXIT_FAILURE);
+  //   }
 
-    //writing stuff with http
-    //GET /HTTP/1.0
-    //write to file and give to user. 
+  SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+  /* Set the verification depth to 1 */
 
-    int bytes = (1024*1024);
-    int port = 4200;
-    char *method = "getcert";
-    char *buffer = (char *) malloc(sizeof(char)*bytes);
+  //   SSL_CTX_set_verify_depth(ctx, 1);
 
-    char header[100];
-    sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", port, method);
-    char *header2 = "connection: close\n";
-    char header3[100];
+  int sock = create_socket(4200);
 
-    char usernameLine[sizeof(username)+strlen("username:\n")];
-    sprintf(usernameLine, "username:%s\n", username);
-    char passwordLine[sizeof(password)+strlen("password:\n")];
-    sprintf(passwordLine, "password:%s\n", password);
+  SSL *ssl = SSL_new(ctx);
 
-    char csrLine[strlen(csr) + strlen("csr:\n")];
-    sprintf(csrLine, "csr:%s\n", csr);
+  SSL_set_fd(ssl, sock);
 
-    bstring tempstring = bfromcstr(csrLine);
-    bstring bkey = bfromcstr("");
-    bstring bvalue = bfromcstr("");
-    serializeData(bkey, bvalue, tempstring, 1);
-    char *encodedCsrLine = bvalue->data;
-    bdestroy(tempstring);
-    
-    int contentLength = strlen(usernameLine) + strlen(passwordLine) + strlen(encodedCsrLine) + 1;
-    sprintf(header3, "content-length: %d\n", contentLength);
-    sprintf(buffer, "%s%s%s%s%s%s%s%s", header, header2, header3, "\n", usernameLine, passwordLine, encodedCsrLine, "\n");
-    SSL_write(ssl, buffer, strlen(buffer));
-
-    printf("Enter a path for cert: \n");
-    char ibuf[1000];
-    memset(ibuf, '\0', sizeof(ibuf));
-    char certif[bytes];
-    certif[0] = '\0';
-    int state = 0;
-    char writePath[100];
-    char *resultCertif = '\0';
-    while (1) {
-        int readReturn = SSL_read(ssl, ibuf, sizeof(ibuf)-1);
-        if (readReturn == 0){
-            break;
-        }
-        if ((strstr(ibuf, "200 OK") != NULL) && (state == 0)) {
-            printf("Enter a path for cert: \n");
-            scanf("%s", writePath);
-            state = 1;
-        } else if ((strstr(ibuf, "400") != NULL) && (state == 0)){
-            printf("Error 400: Problem with username, password or key.");
-            break;
-        } else if ((strstr(ibuf, "-2") != NULL) && (state == 0)) {
-            printf("Error -2: Wrong Password");
-            break;
-        }
-        else if ((strstr(ibuf, "-1") != NULL) && (state == 0)) {
-            printf("Error -1: Bad Username");
-            break;
-        }
-        else if ((strstr(ibuf, "-3") != NULL) && (state == 0)) {
-            printf("Error -3: Opening file or directory error");
-        }
-       else if ((strstr(ibuf, "-5") != NULL) && (state == 0)) {
-            printf("Warning: Certificate exists already!");
-            printf("Enter a path for cert: \n");
-            scanf("%s", writePath);
-            state = 1;
-        } 
-        else if ((state == 1) && (ibuf[0] == '\n')) {
-            state = 2;
-        } else if ((state == 2) && (ibuf[0] != '\n')) {
-            sprintf(certif+strlen(certif), ibuf);
-        } else if ((state == 2) && (ibuf[0] == '\n')) {
-            break;
-        }
-    }
-    if ((state == 2) && (certif != NULL)) {
-        bstring temp1 = bfromcstr(certif);
-        bstring bkey1 = bfromcstr("");
-        bstring bvalue1 = bfromcstr("");
-        deserializeData(bkey1, bvalue1, temp1, 1);
-        resultCertif = bvalue1->data;
-        FILE *fp;
-        fp = fopen(writePath, "w+");
-        fputs(resultCertif, fp);
-        fclose(fp);
-        printf("Wrote certification to: %s\n", writePath);
-        bdestroy(bkey1);
-        bdestroy(bvalue1);
-        bdestroy(temp1);
-    }
-
-    free(csr);
-    free(buffer);
-    free(sbio);
-    bdestroy(bkey);
-    bdestroy(bvalue);
+  if (SSL_connect(ssl) <= 0) {
+    ERR_print_errors_fp(stderr);
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
+    close(sock);
+    SSL_CTX_free(ctx);
+    EVP_cleanup();
     return 0;
+  }
+
+  // writing stuff with http
+  // GET /HTTP/1.0
+  // write to file and give to user.
+
+  int bytes = (1024 * 1024);
+  int port = 4200;
+  char *method = "getcert";
+  char *buffer = (char *)malloc(sizeof(char) * bytes);
+
+  char header[100];
+  sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", port, method);
+  char *header2 = "connection: close\n";
+  char header3[100];
+
+  char usernameLine[strlen(username) + strlen("username:\n") + 1];
+	usernameLine[strlen(username) + strlen("username:\n")] = '\0';
+  sprintf(usernameLine, "username:%s\n", username);
+  char passwordLine[strlen(password) + strlen("password:\n") + 1];
+	passwordLine[strlen(password) + strlen("password:\n")] = '\0';
+  sprintf(passwordLine, "password:%s\n", password);
+
+  char csrLine[strlen(csr) + strlen("csr:\n") + 1];
+	csrLine[strlen(csr) + strlen("csr:\n")] = '\0';
+  sprintf(csrLine, "csr:%s\n", csr);
+
+  bstring tempstring = bfromcstr(csrLine);
+  bstring bkey = bfromcstr("");
+  bstring bvalue = bfromcstr("");
+  serializeData(bkey, bvalue, tempstring, 1);
+  char *encodedCsrLine = bvalue->data;
+  bdestroy(tempstring);
+
+  int contentLength =
+      strlen(usernameLine) + strlen(passwordLine) + strlen(encodedCsrLine) + 1;
+  sprintf(header3, "content-length: %d\n", contentLength);
+  sprintf(buffer, "%s%s%s%s%s%s%s%s", header, header2, header3, "\n",
+          usernameLine, passwordLine, encodedCsrLine, "\n");
+  SSL_write(ssl, buffer, strlen(buffer));
+
+  printf("Enter a path for cert: \n");
+  char ibuf[1000];
+  memset(ibuf, '\0', sizeof(ibuf));
+  char certif[bytes];
+  certif[0] = '\0';
+  int state = 0;
+  char writePath[100];
+  char *resultCertif = '\0';
+  while (1) {
+    int readReturn = SSL_read(ssl, ibuf, sizeof(ibuf) - 1);
+    if (readReturn == 0) {
+      break;
+    }
+    if ((strstr(ibuf, "200 OK") != NULL) && (state == 0)) {
+      printf("Enter a path for cert: \n");
+      scanf("%s", writePath);
+      state = 1;
+    } else if ((strstr(ibuf, "400") != NULL) && (state == 0)) {
+      printf("Error 400: Problem with username, password or key.");
+      break;
+    } else if ((strstr(ibuf, "-2") != NULL) && (state == 0)) {
+      printf("Error -2: Wrong Password");
+      break;
+    } else if ((strstr(ibuf, "-1") != NULL) && (state == 0)) {
+      printf("Error -1: Bad Username");
+      break;
+    } else if ((strstr(ibuf, "-3") != NULL) && (state == 0)) {
+      printf("Error -3: Opening file or directory error");
+    } else if ((strstr(ibuf, "-5") != NULL) && (state == 0)) {
+      printf("Warning: Certificate exists already!");
+      printf("Enter a path for cert: \n");
+      scanf("%s", writePath);
+      state = 1;
+    } else if ((state == 1) && (ibuf[0] == '\n')) {
+      state = 2;
+    } else if ((state == 2) && (ibuf[0] != '\n')) {
+      sprintf(certif + strlen(certif), ibuf);
+    } else if ((state == 2) && (ibuf[0] == '\n')) {
+      break;
+    }
+  }
+  if ((state == 2) && (certif != NULL)) {
+    bstring temp1 = bfromcstr(certif);
+    bstring bkey1 = bfromcstr("");
+    bstring bvalue1 = bfromcstr("");
+    deserializeData(bkey1, bvalue1, temp1, 1);
+    resultCertif = bvalue1->data;
+    FILE *fp;
+    fp = fopen(writePath, "w+");
+    fputs(resultCertif, fp);
+    fclose(fp);
+    printf("Wrote certification to: %s\n", writePath);
+    bdestroy(bkey1);
+    bdestroy(bvalue1);
+    bdestroy(temp1);
+  }
+
+  free(csr);
+  free(buffer);
+  bdestroy(bkey);
+  bdestroy(bvalue);
+
+  // Cleanup at the end
+  close(sock);
+  SSL_CTX_free(ctx);
+  EVP_cleanup();
+  return 0;
 }
