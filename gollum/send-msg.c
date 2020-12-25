@@ -322,18 +322,18 @@ int main(int argc, char *argv[]) {
       }
     } else if (strstr(code, "-2") != NULL) {
       fprintf(stderr, "Error: Invalid Recipient\n");
-      // remove(r_certfile);
-      // free(response);
-      // response = NULL;
-      // curr = curr->next;
-      // continue;
+      remove(r_certfile);
+      free(response);
+      response = NULL;
+      curr = curr->next;
+      continue;
     } else if (strstr(code, "-3") != NULL) {
       fprintf(stderr, "Error: Could not retrieve certificate\n");
-      // remove(r_certfile);
-      // free(response);
-      // response = NULL;
-      // curr = curr->next;
-      // continue;
+      remove(r_certfile);
+      free(response);
+      response = NULL;
+      curr = curr->next;
+      continue;
     }
     
     if ((state == 1) && (response != NULL)) {

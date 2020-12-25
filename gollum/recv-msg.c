@@ -193,7 +193,6 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   code[sizeof(code)-1] = '\0';
-  printf("Code: %s\n", code);
   int state = 0;
   if (strstr(code, "200") != NULL) {
     while (1) {
@@ -206,16 +205,18 @@ int main(int argc, char *argv[]) {
       }
       sprintf(response+strlen(response), "%s", buf);
     }
-  } else if (strstr(code, "-2") != NULL) {
-    fprintf(stderr, "Error: Invalid Sender\n");
-    // free(response);
-    // response = NULL;
-    // return -1;
   } else if (strstr(code, "-3") != NULL) {
-    fprintf(stderr, "Error: Could not retrieve certificate\n");
-    // free(response);
-    // response = NULL;
-    // return -1;
+    fprintf(stderr, "Error: Could not receive message\n");      
+    free(response);
+    response = NULL;
+    cleanup;
+    return -1;
+  } else if (strstr(code, "-1") != NULL) {
+    fprintf(stderr, "Error: No Messages\n");
+    free(response);
+    response = NULL;
+    cleanup;
+    return -1;
   }
   printf("%s\n", response);
   if ((state == 1) && (response != NULL)) {
@@ -397,11 +398,21 @@ int main(int argc, char *argv[]) {
       }
       sprintf(response+strlen(response), "%s", buf);
     }
-  } else if (strstr(code2, "-3") != NULL) {
-    fprintf(stderr, "Error: Could not receive message\n");      
-  } else if (strstr(code2, "-5") != NULL) {
-    fprintf(stderr, "Error: No Messages\n");      
-  } 
+  } else if (strstr(code, "-2") != NULL) {
+    fprintf(stderr, "Error: Invalid Sender\n");
+    remove(s_certfile);
+    free(response);
+    response = NULL;
+    cleanup;
+    return -1;
+  } else if (strstr(code, "-3") != NULL) {
+    fprintf(stderr, "Error: Could not retrieve certificate\n");
+    remove(s_certfile);
+    free(response);
+    response = NULL;
+    cleanup;
+    return -1;
+  }
   if ((state == 1) && (response != NULL)) {
     bstring bresponse = bfromcstr(response);
     struct bstrList *lines = bsplit(bresponse, '\n');

@@ -36,7 +36,7 @@
 #define ERR_NO_MSG (-1)
 #define ERR_NO_MSG_MSG "No Messages"
 #define ERR_INVALID_USER (-2)
-#define ERR_INVALID_USER_MSG "Invalid Recipient"
+#define ERR_INVALID_USER_MSG "Invalid User"
 #define ERR_OPEN (-3)
 #define ERR_OPEN_MSG "File/Dir Open"
 #define ERR_MAILBOX_FULL (-4)
