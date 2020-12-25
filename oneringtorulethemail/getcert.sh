@@ -9,8 +9,6 @@ clientreq=$2
 impass=pass
 imcnf=$3
 
-echo $1 $2 $3 > out
-
 # if $clientcert already exists and revoke flag is set, then openssl ca -config $imcnf -revoke $clientcert
 # before creating a new cert
 # else if $clientcert exists and revoke not set, then do nothing
