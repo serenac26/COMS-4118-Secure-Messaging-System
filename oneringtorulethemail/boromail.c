@@ -627,7 +627,8 @@ int main(int mama, char **moo) {
             bdestroy(recipientkey);
             bdestroy(recipientvalue);
             bstrListDestroy(lines);
-            connection = 2;
+            if (r != -2) 
+              connection = 2;
             goto cleanup;
           }
 
@@ -684,7 +685,8 @@ int main(int mama, char **moo) {
             bdestroy(messagekey);
             bdestroy(messagevalue);
             bstrListDestroy(lines);
-            connection = 2;
+            if (r != -2) 
+              connection = 2;
             goto cleanup;
           }
 
