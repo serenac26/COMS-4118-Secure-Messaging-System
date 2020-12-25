@@ -63,11 +63,6 @@ int sendmessage(bstring recipient, bstring msg) {
 
 // msgout needs to be freed
 int recvmessage(bstring msgfile, char** msgout) {
-    *msgout = (char *)malloc(MB);
-    if (!*msgout) {
-        perror("Malloc error");
-        return -1;
-    }
     char *line = NULL;
     size_t size = 0;
     FILE *fp;
@@ -77,7 +72,12 @@ int recvmessage(bstring msgfile, char** msgout) {
     if (!fp) {
         fprintf(stderr, "%s\n", msgfile->data);
         perror("File open error");
-        free(*msgout);
+        return -1;
+    }
+    
+    *msgout = (char *)malloc(MB);
+    if (!*msgout) {
+        perror("Malloc error");
         return -1;
     }
     *msgout = '\0';
