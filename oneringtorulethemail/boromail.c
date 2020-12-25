@@ -598,7 +598,7 @@ int main(int mama, char **moo) {
           memset(cert, '\0', sizeof(cert));
           int r;
           if ((r = handleGetUserCert(cert, recipientvalue)) != 0) {
-            bstring err = bformat("%s: %d", ERR_MALFORMED_REQUEST, r);
+            bstring err = bformat("Handler returned with error %d\n", r);
             sendBad(ssl, err->data);
             bdestroy(err);
             bdestroy(recipientkey);
@@ -655,7 +655,7 @@ int main(int mama, char **moo) {
           }
           int r;
           if ((r = handleSendMsg(recipientvalue, messagevalue)) != 0) {
-            bstring err = bformat("%s: %d", ERR_MALFORMED_REQUEST, r);
+            bstring err = bformat("Handler returned with error %d\n", r);
             sendBad(ssl, err->data);
             bdestroy(err);
             bdestroy(recipientkey);
@@ -694,7 +694,7 @@ int main(int mama, char **moo) {
           int r;
           char *msg;
           if ((r = handleRecvMsg(recipient, &msg)) != 0) {
-            bstring err = bformat("%s: %d", ERR_MALFORMED_REQUEST, r);
+            bstring err = bformat("Handler returned with error %d\n", r);
             sendBad(ssl, err->data);
             bstrListDestroy(lines);
             connection = 2;
