@@ -411,7 +411,11 @@ int main(int mama, char **moo) {
 
     while (1) {
       memset(rbuf, '\0', sizeof(rbuf));
-      int readReturn = SSL_read(ssl, rbuf, sizeof(rbuf) - 1);
+      int readReturn = 0;
+      while (readReturn < sizeof(rbuf) - 1) {
+        int i = SSL_read(ssl, rbuf + readReturn++, 1);
+        if (i != 1 || rbuf[readReturn - 1] == '\n') break;
+      }
       pf("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
       if (readReturn == 0) {
         pf("0 bytes read\n");
