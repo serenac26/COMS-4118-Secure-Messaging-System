@@ -74,26 +74,26 @@ verifysign: verifysign.o
 	$(CC) $< -o $@ $(LFLAGS)
 # End testing
 	
-client: signmsg encryptmsg decryptmsg send-msg recv-msg
+client: signmsg encryptmsg decryptmsg sendmsg recvmsg
 	sudo mv $^ $(TREE)/client/bin
 	sudo cp $(GOLLUM)/makecsr.sh $(GOLLUM)/genkey.sh $(TREE)/client/bin
 	sudo cp imopenssl.cnf $(TREE)/client
 
 # Not compiling yet
-get-cert: get-cert.o utils.o $(BSTROBJS) $(B64OBJS)
+getcert: get-cert.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
-change-pw: change-pw.o utils.o $(BSTROBJS) $(B64OBJS)
+changepw: change-pw.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 #
 
-send-msg: send-msg.o utils.o $(BSTROBJS) $(B64OBJS)
+sendmsg: send-msg.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
-recv-msg: recv-msg.o utils.o $(BSTROBJS) $(B64OBJS)
+recvmsg: recv-msg.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
