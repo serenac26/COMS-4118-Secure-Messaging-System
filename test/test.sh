@@ -39,12 +39,11 @@ rm -f $tmp/$A* $tmp/$B* $tmp/$C*
 
 # Functionality tests
 
-msg1="MAIL FROM:<$A>\n
-RCPT TO:<$B>\n
-Hello $B!\n
-Love,\n
-$A
-"
+msg1="MAIL FROM:<$A>
+RCPT TO:<$B>
+Hello $B!
+Love,
+$A"
 
 testfunctionality1 () {
     echo "Test Functionality 1: basic end to end without changepw"
@@ -310,13 +309,12 @@ testfunctionality5 () {
     return 0
 }
 
-badmsg1="MAIL FROM:<$A>\n
-RCPT TO:<bad$B>\n
-RCPT TO:<$B>\n
-Hello $B!\n
-Love,\n
-$A\n
-"
+badmsg1="MAIL FROM:<$A>
+RCPT TO:<bad$B>
+RCPT TO:<$B>
+Hello $B!
+Love,
+$A"
 
 testfunctionality6 () {
     echo "Test Functionality 6: sendmsg to invalid recipient"
@@ -338,12 +336,11 @@ testfunctionality6 () {
     return 0
 }
 
-badmsg2="MAIL FROM:<$A>\n
-RCPT TO:<$C>\n
-Hello $C!\n
-Love,\n
-$A
-"
+badmsg2="MAIL FROM:<$A>
+RCPT TO:<$C>
+Hello $C!
+Love,
+$A"
 
 testfunctionality7 () {
     echo "Test Functionality 7: sendmsg to user who has not getcert'd yet"
@@ -428,12 +425,11 @@ testfunctionality () {
 
 # User Impersonation tests
 
-badmsg3="MAIL FROM:<$B>\n
-RCPT TO:<$C>\n
-Hello $C!\n
-Love,\n
-$A
-"
+badmsg3="MAIL FROM:<$B>
+RCPT TO:<$C>
+Hello $C!
+Love,
+$A"
 
 testimpersonation () {
     echo "Test Security 1: sendmsg sender impersonation"
@@ -575,8 +571,8 @@ testlargemsg () {
     msgout=msg13out.txt
 
     echo "write large message"
-    echo "MAIL FROM:<$A>\n" >> $tmp/$msg
-    echo "RCPT TO:<$B>\n" >> $tmp/$msg
+    echo "MAIL FROM:<$A>" >> $tmp/$msg
+    echo "RCPT TO:<$B>" >> $tmp/$msg
     for i in 1..1000000; do
         echo "." >> $tmp/$msg
     done
@@ -597,9 +593,8 @@ testlargemsg () {
     return 0
 }
 
-smolmsg="MAIL FROM:<$A>\n
-RCPT TO:<$B>\n
-"
+smolmsg="MAIL FROM:<$A>
+RCPT TO:<$B>"
 
 testspamsendmsg () {
     echo "Test spam sendmsg to fill up mailbox"
