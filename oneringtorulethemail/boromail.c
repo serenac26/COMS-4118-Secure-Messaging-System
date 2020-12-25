@@ -441,6 +441,7 @@ int main(int mama, char **moo) {
       int readReturn = 0;
       while (readReturn < sizeof(rbuf) - 1) {
         int i = SSL_read(ssl, rbuf + readReturn++, 1);
+        if (i == 0) readReturn--;
         if (i != 1 || rbuf[readReturn - 1] == '\n') break;
       }
       pb("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);

@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
     close(sock);
     SSL_CTX_free(ctx);
     EVP_cleanup();
-		free(password);
+    free(password);
     return 0;
   }
 
@@ -151,16 +151,13 @@ int main(int argc, char *argv[]) {
   passwordLine[strlen(password) + strlen("password:\n")] = '\0';
   sprintf(passwordLine, "password:%s\n", password);
 
-  char csrLine[strlen(csr) + strlen("csr:\n") + 1];
-  csrLine[strlen(csr) + strlen("csr:\n")] = '\0';
-  sprintf(csrLine, "csr:%s\n", csr);
-
-  bstring tempstring = bfromcstr(csrLine);
-  bstring bkey = bfromcstr("");
-  bstring bvalue = bfromcstr("");
-  serializeData(bkey, bvalue, tempstring, 1);
-  char *encodedCsrLine = bvalue->data;
-  bdestroy(tempstring);
+  bstring encoded = bfromcstr("");
+  bstring bkey = bfromcstr("csr");
+  bstring bvalue = bfromcstr(csr);
+  serializeData(bkey, bvalue, encoded, 1);
+  char *encodedCsrLine = encoded->data;
+  bdestroy(bkey);
+  bdestroy(bvalue);
 
   int contentLength =
       strlen(usernameLine) + strlen(passwordLine) + strlen(encodedCsrLine) + 1;
@@ -169,16 +166,22 @@ int main(int argc, char *argv[]) {
           usernameLine, passwordLine, encodedCsrLine, "\n");
   SSL_write(ssl, buffer, strlen(buffer));
 
-  printf("Enter a path for cert: \n");
-  char ibuf[1000];
-  memset(ibuf, '\0', sizeof(ibuf));
-  char certif[bytes];
-  certif[0] = '\0';
+  bdestroy(encoded);
+
+  // printf("Enter a path for cert: \n");
+  bstring certif = bfromcstr("");
   int state = 0;
   char writePath[100];
   char *resultCertif = '\0';
   while (1) {
-    int readReturn = SSL_read(ssl, ibuf, sizeof(ibuf) - 1);
+		char ibuf[1000];
+		memset(ibuf, '\0', sizeof(ibuf));
+    int readReturn = 0;
+    while (readReturn < sizeof(ibuf) - 1) {
+      int i = SSL_read(ssl, ibuf + readReturn++, 1);
+			if (i == 0) readReturn--;
+      if (i != 1 || ibuf[readReturn - 1] == '\n') break;
+    }
     if (readReturn == 0) {
       break;
     }
@@ -205,16 +208,17 @@ int main(int argc, char *argv[]) {
     } else if ((state == 1) && (ibuf[0] == '\n')) {
       state = 2;
     } else if ((state == 2) && (ibuf[0] != '\n')) {
-      sprintf(certif + strlen(certif), ibuf);
+      bstring _ibuf = bfromcstr(ibuf);
+      bconcat(certif, _ibuf);
+      bdestroy(_ibuf);
     } else if ((state == 2) && (ibuf[0] == '\n')) {
       break;
     }
   }
-  if ((state == 2) && (certif != NULL)) {
-    bstring temp1 = bfromcstr(certif);
+  if ((state == 2) && (certif->slen > 0)) {
     bstring bkey1 = bfromcstr("");
     bstring bvalue1 = bfromcstr("");
-    deserializeData(bkey1, bvalue1, temp1, 1);
+    deserializeData(bkey1, bvalue1, certif, 1);
     resultCertif = bvalue1->data;
     FILE *fp;
     fp = fopen(writePath, "w+");
@@ -223,13 +227,11 @@ int main(int argc, char *argv[]) {
     printf("Wrote certification to: %s\n", writePath);
     bdestroy(bkey1);
     bdestroy(bvalue1);
-    bdestroy(temp1);
   }
 
+  bdestroy(certif);
   free(csr);
   free(buffer);
-  bdestroy(bkey);
-  bdestroy(bvalue);
 
   // Cleanup at the end
   SSL_shutdown(ssl);
@@ -237,6 +239,6 @@ int main(int argc, char *argv[]) {
   close(sock);
   SSL_CTX_free(ctx);
   EVP_cleanup();
-	free(password);
+  free(password);
   return 0;
 }
