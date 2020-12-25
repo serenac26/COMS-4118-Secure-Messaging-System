@@ -37,6 +37,8 @@
 #define ERR_PENDING_MSG (-4)
 #define ERR_CERT_EXISTS (-5)
 
+#define KEYPASS "pass"
+
 #define pf(...)           \
   if (DEBUG) {            \
     printf("\033[0;34m"); \
@@ -305,6 +307,13 @@ void sendBad(SSL *ssl, void *content) {
   bdestroy(toSend);
 }
 
+int pw_cb(char *buf, int size, int rwflag, void *u)
+ {
+     strncpy(buf, (char *)u, size);
+     buf[size - 1] = '\0';
+     return strlen(buf);
+ }
+
 // Refer to:
 // http://h30266.www3.hpe.com/odl/axpos/opsys/vmsos84/BA554_90007/ch04s03.html
 // and https://wiki.openssl.org/index.php/Simple_TLS_Server for more information
@@ -321,6 +330,9 @@ int main(int mama, char **moo) {
   // Only accept the LATEST and GREATEST in TLS
   SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
   SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
+
+  SSL_CTX_set_default_passwd_cb(ctx, pw_cb);
+  SSL_CTX_set_default_passwd_cb_userdata(ctx, KEYPASS);
 
   if (SSL_CTX_use_certificate_file(ctx,
                                    "../ca/intermediate/certs/faramail.cert.pem",
