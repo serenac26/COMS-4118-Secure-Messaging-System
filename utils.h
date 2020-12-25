@@ -25,6 +25,9 @@
 #define CSR_PATH "../ca/intermediate/csr"
 #define CSR_SUFFIX ".req.pem"
 
+#define FARAMAIL_PORT 4200
+#define BOROMAIL_PORT 6969
+
 #define MAX_CERT_SIZE 2048
 
 #define IMCNF "imopenssl.cnf"
