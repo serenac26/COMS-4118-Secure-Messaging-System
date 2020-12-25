@@ -37,6 +37,8 @@
 #define ERR_PENDING_MSG (-4)
 #define ERR_CERT_EXISTS (-5)
 
+#define KEYPASS "pass"
+
 #define pf(...)           \
   if (DEBUG) {            \
     printf("\033[0;34m"); \
@@ -78,6 +80,8 @@ int parseVerbLine(char *data, struct VerbLine *vl) {
   regmatch_t match[6];
   int test = regexec(&reg, data, 6, match, 0);
 
+  regfree(&reg);
+
   if (test == REG_NOMATCH)
     return 1;
   else if (match[1].rm_eo - match[1].rm_so >= sizeof(vl->verb))
@@ -114,7 +118,6 @@ int parseVerbLine(char *data, struct VerbLine *vl) {
     vl->version[i] = data[j];
   }
 
-  regfree(&reg);
   return 0;
 }
 
@@ -141,6 +144,8 @@ int parseOptionLine(char *data, struct OptionLine *ol) {
   regmatch_t match[3];
   int test = regexec(&reg, data, 3, match, 0);
 
+  regfree(&reg);
+
   if (test == REG_NOMATCH)
     return 1;
   else if (match[1].rm_eo - match[1].rm_so >= sizeof(ol->header))
@@ -161,7 +166,6 @@ int parseOptionLine(char *data, struct OptionLine *ol) {
     ol->value[i] = data[j];
   }
 
-  regfree(&reg);
   return 0;
 }
 
@@ -305,6 +309,13 @@ void sendBad(SSL *ssl, void *content) {
   bdestroy(toSend);
 }
 
+int pw_cb(char *buf, int size, int rwflag, void *u)
+ {
+     strncpy(buf, (char *)u, size);
+     buf[size - 1] = '\0';
+     return strlen(buf);
+ }
+
 // Refer to:
 // http://h30266.www3.hpe.com/odl/axpos/opsys/vmsos84/BA554_90007/ch04s03.html
 // and https://wiki.openssl.org/index.php/Simple_TLS_Server for more information
@@ -321,6 +332,9 @@ int main(int mama, char **moo) {
   // Only accept the LATEST and GREATEST in TLS
   SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
   SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
+
+  SSL_CTX_set_default_passwd_cb(ctx, pw_cb);
+  SSL_CTX_set_default_passwd_cb_userdata(ctx, KEYPASS);
 
   if (SSL_CTX_use_certificate_file(ctx,
                                    "../ca/intermediate/certs/faramail.cert.pem",
@@ -411,7 +425,11 @@ int main(int mama, char **moo) {
 
     while (1) {
       memset(rbuf, '\0', sizeof(rbuf));
-      int readReturn = SSL_read(ssl, rbuf, sizeof(rbuf) - 1);
+      int readReturn = 0;
+      while (readReturn < sizeof(rbuf) - 1) {
+        int i = SSL_read(ssl, rbuf + readReturn++, 1);
+        if (i != 1 || rbuf[readReturn - 1] == '\n') break;
+      }
       pf("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
       if (readReturn == 0) {
         pf("0 bytes read\n");
@@ -749,6 +767,7 @@ int main(int mama, char **moo) {
     SSL_shutdown(ssl);
     SSL_free(ssl);
     close(client);
+    if (DEBUG && strcmp(vl.version, "die") == 0) break;
   }
 
   close(sock);
