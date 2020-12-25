@@ -116,21 +116,21 @@ int main(int argc, char *argv[]) {
   if (!(stat(msginfile, &st) == 0 && S_ISREG(st.st_mode) && st.st_size < MB)) {
     fprintf(stderr, "%s\n", msginfile);
     perror("Invalid file");
-    return -2;
+    return -1;
   }
 
   fp = fopen(msginfile, "r");
   if (!fp) {
     fprintf(stderr, "%s\n", msginfile);
     perror("File open error");
-    return -2;
+    return -1;
   }
 
   regex_t mailfrom;
   if (0 != regcomp(&mailfrom, "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$", REG_EXTENDED | REG_ICASE)) {
     perror("Regex did not compile successfully");
     fclose(fp);
-    return -2;
+    return -1;
   }
 
   // Read sender line
@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
     bdestroy(inp);
     regfree(&mailfrom);
     fclose(fp);
-    return -2;
+    return -1;
   }
   int ismblong = inp->slen == MB;
   if (ismblong) {
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
     bdestroy(inp);
     regfree(&mailfrom);
     fclose(fp);
-    return -2;
+    return -1;
   }
   regmatch_t mailfrommatch[2];
   int mailfromtest = regexec(&mailfrom, (char *)inp->data, 2, mailfrommatch, 0);
@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
     bdestroy(inp);
     regfree(&mailfrom);
     fclose(fp);
-    return -2;
+    return -1;
   }
   bdestroy(inp);
   regfree(&mailfrom);
@@ -168,14 +168,14 @@ int main(int argc, char *argv[]) {
   if (regcomp(&rcptto, "^\\.?rcpt to:<([a-z0-9\\+\\-_]+)>[\r]*\n$", REG_EXTENDED | REG_ICASE) != 0) {
     perror("Regex did not compile successfully");
     fclose(fp);
-    return -2;
+    return -1;
   }
 
   struct Node *rcpts = createList();
   if (rcpts == NULL) {
     regfree(&rcptto);
     fclose(fp);
-    return -2;
+    return -1;
   }
 
   while (1) {
@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
       bdestroy(inp);
       freeList(rcpts);
       fclose(fp);
-      return -2;
+      return -1;
     }
     regmatch_t rcpttomatch[2];
     int rcpttotest = regexec(&rcptto, (char *)inp->data, 2, rcpttomatch, 0);
@@ -227,16 +227,31 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "recipient: %s\n", (char *)r->data);
 
     // TODO: Server sends back recipient certificate which we write to temp file r_certfile 
-    // or do error handling (i.e. `continue`)
+    // Error handling:
+      // remove(r_certfile);
+      // curr = curr->next;
+      // continue;
 
 
 
     // Encrypt the message with recipient cert and write to temp file unsigned.encrypted.msg
-    encryptmsg(r_certfile, msginfile, unsigned_encrypted_file);
+    if (0 != encryptmsg(r_certfile, msginfile, unsigned_encrypted_file)) {
+      remove(r_certfile);
+      remove(unsigned_encrypted_file);
+      curr = curr->next;
+      continue;
+    }
+    remove(r_certfile);
 
 
     // Sign the encrypted message with the sender's private key and write to temp file signed.encrypted.msg
-    signmsg(certfile, keyfile, unsigned_encrypted_file, signed_encrypted_file);
+    if (0 != signmsg(certfile, keyfile, unsigned_encrypted_file, signed_encrypted_file)) {
+      remove(unsigned_encrypted_file);
+      remove(signed_encrypted_file);
+      curr = curr->next;
+      continue;
+    }
+    remove(unsigned_encrypted_file);
     
 
     // Read the signed, encrypted message into buffer
@@ -244,11 +259,12 @@ int main(int argc, char *argv[]) {
     *buffer = '\0';
     fp = fopen(signed_encrypted_file, "r");
     if (!fp) {
-        fprintf(stderr, "%s\n", signed_encrypted_file);
-        perror("File open error");
-        free(buffer);
-        freeList(rcpts);
-        return -3;
+      fprintf(stderr, "File open error: %s\n", signed_encrypted_file);
+      remove(signed_encrypted_file);
+      free(buffer);
+      buffer = NULL;
+      curr = curr->next;
+      continue;
     }
     while (0 < getline(&line, &size, fp)) {
       strncat(buffer, line, size);
@@ -256,25 +272,30 @@ int main(int argc, char *argv[]) {
     free(line);
     line = NULL;
     fclose(fp);
+    remove(signed_encrypted_file);
 
 
     //  TODO: Send the signed message to the server /msgin
     fprintf(stdout, "%s", buffer);
 
+
+
+    // TODO: Get response back from server
+    // Error handling:
+      // free(buffer);
+      // buffer = NULL;
+      // curr = curr->next;
+      // continue;
+
     free(buffer);
     buffer = NULL;
-
-
-    //  TODO: Get response back from server
-    
-
-
-    // Delete temp files
-    remove(r_certfile);
-    remove(unsigned_encrypted_file);
-    remove(signed_encrypted_file);
     curr = curr->next;
   }
+
+  // TODO: Close connection with server
+  // Error handling:
+    // freeList(rcpts);
+    // return -1;
 
   freeList(rcpts);
   return 0;

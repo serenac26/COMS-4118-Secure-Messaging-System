@@ -24,17 +24,6 @@
 
 // usage: recv-msg <cert-file> <key-file> <msg-out-file>
 
-// 1. give both cert and private key to do SSL handshake verification and connect to server
-// 2. gets a signed encrypted message from server and write to temp file signed.encrypted.msg
-// 3. get encrypted message from signed.encrypted.msg using cms_verify and CMS_NO_SIGNER_CERT_VERIFY flag to temp file unsigned.encrypted.msg
-// 4. decrypt unsigned.encrypted.msg using recipient's private key and write to temp file unsigned.decrypted.msg
-// 5. parse sender info from unsigned.decrypted.msg header FROM:
-// 6. send sender name to server /getusercert
-// 7. gets sender cert and write to temp file sender.cert.pem
-// 8. verify sender of signed-message with cms_verify using sender.cert.pem and client's copy of ca-chain
-// 9. write the decrypted message to the specified output file
-// 10. delete temp files (signed.encrypted.msg, unsigned.decrypted.msg, sender.cert.pem)
-
 int main(int argc, char *argv[]) {
   struct stat st;
   char *certfile, *keyfile, *msgoutfile, *buffer;
@@ -123,15 +112,25 @@ int main(int argc, char *argv[]) {
 
 
   // TODO: Get signed encrypted message from server and write to temp file signed.encrypted.msg
-  signed_encrypted_file = "../../../temp.signed"; // TODO: change this
+  // Error handling:
+      // return -1;
 
 
   // Get encrypted message from signed.encrypted.msg without verifying and write to temp file unsigned.encrypted.msg
-  verifyunsign(signed_encrypted_file, unsigned_encrypted_file);
+  if (0 != verifyunsign(signed_encrypted_file, unsigned_encrypted_file)) {
+    // remove(signed_encrypted_file);
+    remove(unsigned_encrypted_file);
+    return -1;
+  }
 
 
   // Decrypt unsigned.encrypted.msg using recipient's private key and write to temp file unsigned.decrypted.msg
-  decryptmsg(certfile, keyfile, unsigned_encrypted_file, unsigned_decrypted_file);
+  if (0 != decryptmsg(certfile, keyfile, unsigned_encrypted_file, unsigned_decrypted_file)) {
+    // remove(signed_encrypted_file);
+    remove(unsigned_encrypted_file);
+    remove(unsigned_decrypted_file);
+    return -1;
+  }
   remove(unsigned_encrypted_file);
 
 
@@ -142,18 +141,17 @@ int main(int argc, char *argv[]) {
     perror("File open error");
     remove(unsigned_decrypted_file);
     // remove(signed_encrypted_file);
-    // remove(s_certfile);
-    return -2;
+    return -1;
   }
 
   regex_t mailfrom;
   if (0 != regcomp(&mailfrom, "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$", REG_EXTENDED | REG_ICASE)) {
     perror("Regex did not compile successfully");
+    regfree(&mailfrom);
     fclose(fp);
     remove(unsigned_decrypted_file);
     // remove(signed_encrypted_file);
-    // remove(s_certfile);
-    return -2;
+    return -1;
   }
 
   bstring inp = bgets_limit((bNgetc)fgetc, fp, '\n', MB);
@@ -164,8 +162,7 @@ int main(int argc, char *argv[]) {
     fclose(fp);
     remove(unsigned_decrypted_file);
     // remove(signed_encrypted_file);
-    // remove(s_certfile);
-    return -2;
+    return -1;
   }
   int ismblong = inp->slen == MB;
   if (ismblong) {
@@ -175,8 +172,7 @@ int main(int argc, char *argv[]) {
     fclose(fp);
     remove(unsigned_decrypted_file);
     // remove(signed_encrypted_file);
-    // remove(s_certfile);
-    return -2;
+    return -1;
   }
   regmatch_t mailfrommatch[2];
   int mailfromtest = regexec(&mailfrom, (char *)inp->data, 2, mailfrommatch, 0);
@@ -187,12 +183,12 @@ int main(int argc, char *argv[]) {
     fclose(fp);
     remove(unsigned_decrypted_file);
     // remove(signed_encrypted_file);
-    // remove(s_certfile);
-    return -2;
+    return -1;
   }
   bstring sender = bmidstr(inp, mailfrommatch[1].rm_so, mailfrommatch[1].rm_eo - mailfrommatch[1].rm_so);
   bdestroy(inp);
   regfree(&mailfrom);
+  fclose(fp);
   remove(unsigned_decrypted_file);
 
 
@@ -201,19 +197,32 @@ int main(int argc, char *argv[]) {
 
 
   // TODO: Get sender cert and write to temp file sender.cert.pem
-  s_certfile = certfile; // TODO: change this
+  // Error handling:
+    // remove(signed_encrypted_file);
+    // remove(s_certfile);
+    // bdestroy(sender);
+    // return -1;
+
+
+  // TODO: Close connection with server
+  // Error handling:
+    // remove(signed_encrypted_file);
+    // remove(s_certfile);
+    // bdestroy(sender);
+    // return -1;
 
 
   // Verify sender of signed-message using sender.cert.pem and 
   // write the decrypted message to the specified output file
-  verifysign(s_certfile, signed_encrypted_file, msgoutfile);
+  if (0 != verifysign(s_certfile, signed_encrypted_file, msgoutfile)) {
+    // remove(signed_encrypted_file);
+    // remove(s_certfile);
+    bdestroy(sender);
+    return -1;
+  }
 
-
-  // Delete temp files (signed.encrypted.msg, unsigned.encrypted.msg, unsigned.decrypted.msg, sender.cert.pem)
   // remove(signed_encrypted_file);
   // remove(s_certfile);
-
-
   bdestroy(sender);
   return 0;
 }
