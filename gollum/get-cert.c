@@ -45,17 +45,32 @@ int create_socket(int port) {
 //./get-cert <username> <privatekeyfile>
 int main(int argc, char *argv[]) {
   if (argc != 3) {
-    fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file\n");
+    fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file>\n");
   }
   char *username = argv[1];
   char *password = getpass("Enter password: ");
 
   if ((strlen(username) > 32) || (strlen(password) > 32)) {
-    printf("input too large: must be 32 or less characters\n");
+    printf("input too large: must be <=32 characters\n");
   }
 
   char *privatekeyfile = argv[2];
-
+  struct stat filestatus;
+  if (stat(privatekeyfile, &filestatus) != 0) {
+    fprintf(stderr, "Private key file does not exist\n");
+    return 1;
+  }
+  BIO *keybio = BIO_new_file(privatekeyfile, "r");
+  EVP_PKEY *key = NULL;
+  key = PEM_read_bio_PrivateKey(keybio, NULL, 0, NULL);
+  if (!key) {
+    fprintf(stderr, "Error reading private key file\n");
+    BIO_free(keybio);
+    EVP_PKEY_free(key);
+    return 1;
+  }
+  BIO_free(keybio);
+  EVP_PKEY_free(key);
   char *tempfile = "../tmp/temp.txt";
   int pid, wpid;
   int status = 0;
@@ -63,10 +78,16 @@ int main(int argc, char *argv[]) {
   if (pid == 0) {
     execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username,
           privatekeyfile, tempfile, '\0');
+    perror("execl failed");
+    return 1;
   }
   if ((wpid = wait(&status)) < 0) exit(1);
   FILE *temp;
   temp = fopen(tempfile, "r+");
+  if (!temp) {
+    fprintf(stderr, "File open error\n");
+    return 1;
+  }
   fseek(temp, 0, SEEK_END);
   long fsize1 = ftell(temp);
   fseek(temp, 0, SEEK_SET);
@@ -189,22 +210,23 @@ int main(int argc, char *argv[]) {
       printf("Enter a path for cert: \n");
       scanf("%s", writePath);
       state = 1;
-    } else if ((strstr(ibuf, "400") != NULL) && (state == 0)) {
-      printf("Error 400: Problem with username, password or key.");
-      break;
-    } else if ((strstr(ibuf, "-2") != NULL) && (state == 0)) {
-      printf("Error -2: Wrong Password");
-      break;
-    } else if ((strstr(ibuf, "-1") != NULL) && (state == 0)) {
-      printf("Error -1: Bad Username");
-      break;
-    } else if ((strstr(ibuf, "-3") != NULL) && (state == 0)) {
-      printf("Error -3: Opening file or directory error");
-    } else if ((strstr(ibuf, "-5") != NULL) && (state == 0)) {
+    } else if ((strstr(ibuf, "201 OK") != NULL) && (state == 0)) {
       printf("Warning: Certificate exists already!");
       printf("Enter a path for cert: \n");
       scanf("%s", writePath);
       state = 1;
+    } else if ((strstr(ibuf, "-1") != NULL) && (state == 0)) {
+      printf("Error -1: Bad Username");
+      break;
+    } else if ((strstr(ibuf, "-2") != NULL) && (state == 0)) {
+      printf("Error -2: Wrong Password");
+      break;
+    } else if ((strstr(ibuf, "-3") != NULL) && (state == 0)) {
+      printf("Error -3: Opening file or directory error");
+      break;
+    } else if ((strstr(ibuf, "400") != NULL) && (state == 0)) {
+      printf("Error 400: Problem with username, password or key.");
+      break;
     } else if ((state == 1) && (ibuf[0] == '\n')) {
       state = 2;
     } else if ((state == 2) && (ibuf[0] != '\n')) {
@@ -212,6 +234,9 @@ int main(int argc, char *argv[]) {
       bconcat(certif, _ibuf);
       bdestroy(_ibuf);
     } else if ((state == 2) && (ibuf[0] == '\n')) {
+      break;
+    } else {
+      printf("not handled\n");
       break;
     }
   }
@@ -222,9 +247,13 @@ int main(int argc, char *argv[]) {
     resultCertif = bvalue1->data;
     FILE *fp;
     fp = fopen(writePath, "w+");
-    fputs(resultCertif, fp);
-    fclose(fp);
-    printf("Wrote certification to: %s\n", writePath);
+    if (!fp) {
+      fprintf(stderr, "File write error\n");
+    } else {
+      fputs(resultCertif, fp);
+      fclose(fp);
+      printf("Wrote certification to: %s\n", writePath);
+    }
     bdestroy(bkey1);
     bdestroy(bvalue1);
   }

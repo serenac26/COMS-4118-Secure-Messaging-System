@@ -437,15 +437,15 @@ int main(int mama, char **moo) {
         pf("0 bytes read\n");
         break;
       } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
-        SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
+        sendBad(ssl, ERR_TOO_LONG);
         break;
       } else if (state == 0) {
         int result = parseVerbLine(rbuf, &vl);
         if (result == 2) {
-          SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
+          sendBad(ssl, ERR_TOO_LONG);
           break;
         } else if (result == 1) {
-          SSL_write(ssl, ERR_INVALID_LINE, strlen(ERR_INVALID_LINE));
+          sendBad(ssl, ERR_INVALID_LINE);
           break;
         } else {
           if (strcmp(vl.verb, "post") == 0)
@@ -459,13 +459,13 @@ int main(int mama, char **moo) {
         int result = parseOptionLine(rbuf, &ol);
 
         if (result == 2) {
-          SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
+          sendBad(ssl, ERR_TOO_LONG);
           break;
         } else if (result == 1) {
           if (strlen(rbuf) == 1 && rbuf[0] == '\n')
             state = 2;
           else {
-            SSL_write(ssl, ERR_INVALID_LINE, strlen(ERR_INVALID_LINE));
+            sendBad(ssl, ERR_INVALID_LINE);
             break;
           }
         } else if (strcmp(ol.header, "content-length") == 0) {
@@ -478,8 +478,7 @@ int main(int mama, char **moo) {
           }
 
           if (invalidContentLengthFound) {
-            SSL_write(ssl, ERR_INVALID_CONTENT_LENGTH,
-                      strlen(ERR_INVALID_CONTENT_LENGTH));
+            sendBad(ssl, ERR_INVALID_CONTENT_LENGTH);
             break;
           }
 
@@ -492,15 +491,13 @@ int main(int mama, char **moo) {
           else if (strcmp(ol.value, "close") == 0)
             connection = 2;
           else {
-            SSL_write(ssl, ERR_INVALID_CONNECTION_VALUE,
-                      strlen(ERR_INVALID_CONNECTION_VALUE));
+            sendBad(ssl, ERR_INVALID_CONNECTION_VALUE);
             break;
           }
         }
       } else if (state == 2) {
         if (contentLength == -1) {
-          SSL_write(ssl, ERR_MISSING_CONTENT_LENGTH,
-                    strlen(ERR_MISSING_CONTENT_LENGTH));
+          sendBad(ssl, ERR_MISSING_CONTENT_LENGTH);
           break;
         }
 
@@ -523,8 +520,7 @@ int main(int mama, char **moo) {
         }
 
         if (contentReceived < contentLength) {
-          SSL_write(ssl, ERR_INSUFFICIENT_CONTENT_SENT,
-                    strlen(ERR_INSUFFICIENT_CONTENT_SENT));
+          sendBad(ssl, ERR_INSUFFICIENT_CONTENT_SENT);
           break;
         } else if (contentReceived > contentLength) {
           SSL_write(ssl, ERR_ABUNDANT_CONTENT_SENT,
@@ -589,8 +585,7 @@ int main(int mama, char **moo) {
         if (action == 2 && bstrccmp(path, "/getcert") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
           if (lines->qty != 4) {
-            SSL_write(ssl, ERR_MALFORMED_REQUEST,
-                      strlen(ERR_MALFORMED_REQUEST));
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;
@@ -610,8 +605,7 @@ int main(int mama, char **moo) {
               bstrccmp(usernamekey, "username") != 0 ||
               bstrccmp(passwordkey, "password") != 0 ||
               bstrccmp(csrkey, "csr") != 0) {
-            SSL_write(ssl, ERR_MALFORMED_REQUEST,
-                      strlen(ERR_MALFORMED_REQUEST));
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
             bdestroy(usernamekey);
             bdestroy(usernamevalue);
             bdestroy(passwordkey);
@@ -665,8 +659,7 @@ int main(int mama, char **moo) {
         } else if (action == 2 && bstrccmp(path, "/changepw") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
           if (lines->qty != 5) {
-            SSL_write(ssl, ERR_MALFORMED_REQUEST,
-                      strlen(ERR_MALFORMED_REQUEST));
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;
@@ -691,8 +684,7 @@ int main(int mama, char **moo) {
               bstrccmp(passwordkey, "password") != 0 ||
               bstrccmp(newpasswordkey, "newpassword") != 0 ||
               bstrccmp(csrkey, "csr") != 0) {
-            SSL_write(ssl, ERR_MALFORMED_REQUEST,
-                      strlen(ERR_MALFORMED_REQUEST));
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
             bdestroy(usernamekey);
             bdestroy(usernamevalue);
             bdestroy(passwordkey);

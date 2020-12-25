@@ -452,15 +452,15 @@ int main(int mama, char **moo) {
         pb("error: %d %d\n", SSL_get_error(ssl, readReturn), errno);
         break;
       } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
-        SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
+        sendBad(ssl, ERR_TOO_LONG);
         break;
       } else if (state == 0) {
         int result = parseVerbLine(rbuf, &vl);
         if (result == 2) {
-          SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
+          sendBad(ssl, ERR_TOO_LONG);
           break;
         } else if (result == 1) {
-          SSL_write(ssl, ERR_INVALID_LINE, strlen(ERR_INVALID_LINE));
+          sendBad(ssl, ERR_INVALID_LINE);
           break;
         } else {
           if (strcmp(vl.verb, "post") == 0)
@@ -474,13 +474,13 @@ int main(int mama, char **moo) {
         int result = parseOptionLine(rbuf, &ol);
 
         if (result == 2) {
-          SSL_write(ssl, ERR_TOO_LONG, strlen(ERR_TOO_LONG));
+          sendBad(ssl, ERR_TOO_LONG);
           break;
         } else if (result == 1) {
           if (strlen(rbuf) == 1 && rbuf[0] == '\n')
             state = 2;
           else {
-            SSL_write(ssl, ERR_INVALID_LINE, strlen(ERR_INVALID_LINE));
+            sendBad(ssl, ERR_INVALID_LINE);
             break;
           }
         } else if (strcmp(ol.header, "content-length") == 0) {
@@ -493,8 +493,7 @@ int main(int mama, char **moo) {
           }
 
           if (invalidContentLengthFound) {
-            SSL_write(ssl, ERR_INVALID_CONTENT_LENGTH,
-                      strlen(ERR_INVALID_CONTENT_LENGTH));
+            sendBad(ssl, ERR_INVALID_CONTENT_LENGTH);
             break;
           }
 
@@ -507,15 +506,13 @@ int main(int mama, char **moo) {
           else if (strcmp(ol.value, "close") == 0)
             connection = 2;
           else {
-            SSL_write(ssl, ERR_INVALID_CONNECTION_VALUE,
-                      strlen(ERR_INVALID_CONNECTION_VALUE));
+            sendBad(ssl, ERR_INVALID_CONNECTION_VALUE);
             break;
           }
         }
       } else if (state == 2) {
         if (contentLength == -1) {
-          SSL_write(ssl, ERR_MISSING_CONTENT_LENGTH,
-                    strlen(ERR_MISSING_CONTENT_LENGTH));
+          sendBad(ssl, ERR_MISSING_CONTENT_LENGTH);
           break;
         }
 
@@ -538,8 +535,7 @@ int main(int mama, char **moo) {
         }
 
         if (contentReceived < contentLength) {
-          SSL_write(ssl, ERR_INSUFFICIENT_CONTENT_SENT,
-                    strlen(ERR_INSUFFICIENT_CONTENT_SENT));
+          sendBad(ssl, ERR_INSUFFICIENT_CONTENT_SENT);
           break;
         } else if (contentReceived > contentLength) {
           SSL_write(ssl, ERR_ABUNDANT_CONTENT_SENT,
@@ -604,8 +600,7 @@ int main(int mama, char **moo) {
         if (action == 2 && bstrccmp(path, "/getusercert") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
           if (lines->qty != 2) {
-            SSL_write(ssl, ERR_MALFORMED_REQUEST,
-                      strlen(ERR_MALFORMED_REQUEST));
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;
@@ -615,8 +610,7 @@ int main(int mama, char **moo) {
           if (deserializeData(recipientkey, recipientvalue, lines->entry[0],
                               0) != 0 ||
               bstrccmp(recipientkey, "recipient") != 0) {
-            SSL_write(ssl, ERR_MALFORMED_REQUEST,
-                      strlen(ERR_MALFORMED_REQUEST));
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
             bdestroy(recipientkey);
             bdestroy(recipientvalue);
             bstrListDestroy(lines);
@@ -655,8 +649,7 @@ int main(int mama, char **moo) {
         } else if (action == 2 && bstrccmp(path, "/sendmsg") == 0) {
           struct bstrList *lines = bsplit(bdata, '\n');
           if (lines->qty != 3) {
-            SSL_write(ssl, ERR_MALFORMED_REQUEST,
-                      strlen(ERR_MALFORMED_REQUEST));
+            sendBad(ssl, ERR_MALFORMED_REQUEST);            
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;
@@ -672,8 +665,7 @@ int main(int mama, char **moo) {
                   0 ||
               bstrccmp(recipientkey, "recipient") != 0 ||
               bstrccmp(messagekey, "message") != 0) {
-            SSL_write(ssl, ERR_MALFORMED_REQUEST,
-                      strlen(ERR_MALFORMED_REQUEST));
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
             bdestroy(recipientkey);
             bdestroy(recipientvalue);
             bdestroy(messagekey);
@@ -704,8 +696,7 @@ int main(int mama, char **moo) {
 
           bstring recipient = bfromcstr("");
           if (parseSubject(_subject, recipient) != 0) {
-            SSL_write(ssl, ERR_MALFORMED_REQUEST,
-                      strlen(ERR_MALFORMED_REQUEST));
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
             free(_subject);
             connection = 2;
             goto cleanup;
@@ -725,6 +716,7 @@ int main(int mama, char **moo) {
           if ((r = handleRecvMsg(recipient, &msg)) != 0) {
             bstring err = bformat("Handler returned with error %d\n", r);
             sendBad(ssl, err->data);
+            bdestroy(err);
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;

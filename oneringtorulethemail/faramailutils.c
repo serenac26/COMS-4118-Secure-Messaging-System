@@ -137,6 +137,7 @@ int getcert(char *cert, char *username, int *n, int revoke) {
         pid_t pid = fork();
         if (pid == 0) {
             execv("./getcert.sh", args);
+            perror("execv error");
             return -1;
         } else {
             int status;

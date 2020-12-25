@@ -56,6 +56,8 @@ int main(int mama, char **moo)
   {
     char *wheein[] = {"boromail", NULL};
     execv("./boromail", wheein);
+    perror("boromail execv error");
+    exit(1);
   }
   else
   {
@@ -64,6 +66,8 @@ int main(int mama, char **moo)
     {
       char *moonbyul[] = {"faramail", NULL};
       execv("./faramail", moonbyul);
+      perror("faramail execv error");
+      exit(1);
     }
   }
   for (int i = 0; i < 2; i++)
