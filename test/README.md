@@ -12,6 +12,8 @@ cd <tree>/server/bin
 In another shell:
 `sudo ./test.sh <tree>`
 
+Note that you can only run this test script once after installing a new directory. On subsequent runs, the server and CA will not be in the expected initial states anymore and tests will fail. You must start with a fresh directory tree before testing with `test.sh`.
+
 ## Functionality Tests
 
 Test Case 1:
