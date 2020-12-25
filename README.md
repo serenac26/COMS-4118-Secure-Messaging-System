@@ -126,7 +126,7 @@ getcert/changepw will need to access stored certificates and credentials
     * Note that if the user had sent messages to others that remain unread before changepw, then the recipients will no longer be able to receive these messages because the signature will not be verifiable against the sender’s new certificate. In this case, the message will simply be deleted from the recipient’s mailbox on recvmsg. We call this feature ‘unsend’ :)
 * sendmsg
     * Input certificate file, private key file, and message file
-    * Messages are expected to begin with a properly formatted “MAIL FROM:<sender>” line and at least one “MAIL TO:<recipient>” line
+    * Messages are expected to begin with a properly formatted “MAIL FROM:<sender>” line and at least one "RCPT TO:<recipient>” line
     * Verify private key against certificate and connect to Boromail server via TLS after handshake with the client-side certificate
     * Parse recipients from the message
     * For each recipient, send HTTP request for /getusercert with recipient name
