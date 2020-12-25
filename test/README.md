@@ -74,50 +74,57 @@ sendmsg to recipients who have not generated a certificate yet
 * A sendmsg to C
     * no message should be written to C's mailbox
 
-### Security Tests
+## Security Tests
+
+### User Impersonation
 
 Test Case 1:
 sendmsg sender impersonation
 * user C genkey
 * C getcert
-* A tries to sendmsg to C with "From: B" header with A's own cert/key
+* A tries to sendmsg to C with "MAIL FROM:\<B\>" header with A's own certificate/key
     * message 00001 should be written to C's mailbox
 * C recvmsg
     * client signature verification should fail since true sender A's certificate does not match fake sender B's certificate
     * message 00001 should be deleted from C's mailbox
 
 Test Case 2:
-* 
+recvmsg recipient impersonation
+* with our client certificate verification implementation, a user with someone else's certificate (but not private key) will never be able to receive messages that were sent to the other user; see TLS Test Case 1
+* additionally, a user who bypasses the client to send an HTTP response for recvmsg will always be identified by the server from the certificate they used to establish the TLS connection, and since we assume that the impersonator has not stolen another user's private key along with their certificate, they can never impersonate someone else this way
 
-### File Permission Tests
-
-Test Case 1:
-
-### Sandbox Tests
+### TLS 
 
 Test Case 1:
-
-### Volume/DOS Tests
-
-Test Case 1:
-* send large message (>1MB)
-
-Test Case 2:
-* spam sendmsg to a single recipient to fill their mailbox with >99999 messages
-
-Test Case 3:
-* spam changepw (ca may keep revoked certificate metadata)
-
-### TLS Tests
-
-Test Case 1:
+Example: A gets a hold of B's certificate but not private key and attempts to sendmsg/recvmsg with it
 * A tries to sendmsg with mismatched cert/key pair
     * client certificate verification should fail
 
 Test Case 2:
-* A tries to sendmsg with invalid cert
+Example: A gets a certificate signed by a different CA and attempts to sendmsg/recvmsg with it
+* A tries to sendmsg with unverifiable certificate
     * client certificate verification should fail
 
 Test Case 3:
+Example: A uses a malformed certificate
+* A tries to sendmsg with invalid certificate
+    * client certificate verification should fail
+
+Test Case 4:
+Example: A uses a malformed private key
 * A tries to sendmsg with invalid key
     * client certificate verification should fail
+
+### Volume/DOS 
+
+Test Case 1:
+* send large message (>1MB)
+    * client should get an error from server
+
+Test Case 2:
+* spam sendmsg to a single recipient to fill their mailbox with >99999 messages
+    * client should get an error from server when the mailbox is full
+
+### File Permissions
+
+Test Case 1:

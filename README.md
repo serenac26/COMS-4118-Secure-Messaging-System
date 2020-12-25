@@ -38,6 +38,8 @@ If you are missing libssl-dev ```fatal error: openssl/ssl.h: No such file or dir
 
 ```sudo apt-get install libssl-dev```
 
+Please make sure `libcrypt` and `libcrypto` are installed as well.
+
 ## Assumptions
 ### Messages
 Message files are limited to 1 MB in size. \
