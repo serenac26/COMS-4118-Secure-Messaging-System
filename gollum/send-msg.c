@@ -23,6 +23,13 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
+#define RECIPIENT_CERTIFICATE "../tmp/recipient.cert.pem"
+#define UNSIGNED_ENCRYPTED_MSG "../tmp/unsigned.encrypted.msg"
+#define SIGNED_ENCRYPTED_MSG "../tmp/signed.encrypted.msg"
+
+#define RCPTTO_REGEX "^\\.?rcpt to:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
+#define MAILFROM_REGEX "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
+
 // usage: send-msg <cert-file> <key-file> <msg-in-file>
 
 int main(int argc, char *argv[]) {
@@ -31,9 +38,9 @@ int main(int argc, char *argv[]) {
   char *line = NULL;
   size_t size = 0;
   FILE *fp;
-  char *r_certfile = "recipient.cert.pem"; 
-  char *unsigned_encrypted_file = "unsigned.encrypted.msg";
-  char *signed_encrypted_file = "signed.encrypted.msg";
+  char *r_certfile = RECIPIENT_CERTIFICATE; 
+  char *unsigned_encrypted_file = UNSIGNED_ENCRYPTED_MSG;
+  char *signed_encrypted_file = SIGNED_ENCRYPTED_MSG;
 
   if (argc != 4) {
     fprintf(stderr, "bad arg count; usage: send-msg <cert-file> <key-file> <msg-in-file>\n");
@@ -127,7 +134,7 @@ int main(int argc, char *argv[]) {
   }
 
   regex_t mailfrom;
-  if (0 != regcomp(&mailfrom, "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$", REG_EXTENDED | REG_ICASE)) {
+  if (0 != regcomp(&mailfrom, MAILFROM_REGEX, REG_EXTENDED | REG_ICASE)) {
     perror("Regex did not compile successfully");
     fclose(fp);
     return -1;
@@ -165,7 +172,7 @@ int main(int argc, char *argv[]) {
 
   // Read recipient lines
   regex_t rcptto;
-  if (regcomp(&rcptto, "^\\.?rcpt to:<([a-z0-9\\+\\-_]+)>[\r]*\n$", REG_EXTENDED | REG_ICASE) != 0) {
+  if (regcomp(&rcptto, RCPTTO_REGEX, REG_EXTENDED | REG_ICASE) != 0) {
     perror("Regex did not compile successfully");
     fclose(fp);
     return -1;

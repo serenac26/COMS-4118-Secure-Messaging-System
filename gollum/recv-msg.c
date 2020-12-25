@@ -22,6 +22,13 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
+#define SENDER_CERTIFICATE "../tmp/sender.cert.pem"
+#define UNSIGNED_ENCRYPTED_MSG "../tmp/unsigned.encrypted.msg"
+#define UNSIGNED_DECRYPTED_MSG "../tmp/unsigned.decrypted.msg"
+#define SIGNED_ENCRYPTED_MSG "../tmp/signed.encrypted.msg"
+
+#define MAILFROM_REGEX "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
+
 // usage: recv-msg <cert-file> <key-file> <msg-out-file>
 
 int main(int argc, char *argv[]) {
@@ -30,10 +37,10 @@ int main(int argc, char *argv[]) {
   char *line = NULL;
   size_t size = 0;
   FILE *fp;
-  char *s_certfile = "sender.cert.pem"; 
-  char *unsigned_encrypted_file = "unsigned.encrypted.msg";
-  char *unsigned_decrypted_file = "unsigned.decrypted.msg";
-  char *signed_encrypted_file = "signed.encrypted.msg";
+  char *s_certfile = SENDER_CERTIFICATE; 
+  char *unsigned_encrypted_file = UNSIGNED_ENCRYPTED_MSG;
+  char *unsigned_decrypted_file = UNSIGNED_DECRYPTED_MSG;
+  char *signed_encrypted_file = SIGNED_ENCRYPTED_MSG;
 
   if (argc != 4) {
     fprintf(stderr, "bad arg count; usage: recv-msg <cert-file> <key-file> <msg-out-file>\n");
@@ -145,7 +152,7 @@ int main(int argc, char *argv[]) {
   }
 
   regex_t mailfrom;
-  if (0 != regcomp(&mailfrom, "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$", REG_EXTENDED | REG_ICASE)) {
+  if (0 != regcomp(&mailfrom, MAILFROM_REGEX, REG_EXTENDED | REG_ICASE)) {
     perror("Regex did not compile successfully");
     regfree(&mailfrom);
     fclose(fp);
