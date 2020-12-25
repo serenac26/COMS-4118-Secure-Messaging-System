@@ -1,0 +1,5 @@
+MAIL FROM:<addleness>
+RCPT TO:<muermo>
+Hello muermo!
+Love,
+addleness

@@ -39,17 +39,10 @@ rm -f $tmp/$A* $tmp/$B* $tmp/$C*
 
 # Functionality tests
 
-msg1="MAIL FROM:<$A>
-RCPT TO:<$B>
-Hello $B!
-Love,
-$A"
-
 testfunctionality1 () {
     echo "Test Functionality 1: basic end to end without changepw"
     msg=msg1.txt
     msgout=msg1out.txt
-    echo $msg1 > $tmp/$msg
 
     echo "$A and $B generate private keys and certificates"
     ./genkey.sh $keyA $keypass
@@ -107,7 +100,6 @@ testfunctionality2 () {
     echo "Test Functionality 2: changepw with no pending messages"
     msg=msg2.txt
     msgout=msg2out.txt
-    echo $msg1 > $tmp/$msg
 
     echo "$A generates new private key and changes password to get a new certificate"
     ./genkey.sh new$keyA $keypass
@@ -196,7 +188,6 @@ testfunctionality3 () {
     echo "Test Functionality 3: getcert idempotency"
     msg=msg3.txt
     msgout=msg3out.txt
-    echo $msg1 > $tmp/$msg
 
     echo "$A generates new private key"
     ./genkey.sh newnew$keyA $keypass
@@ -256,7 +247,6 @@ testfunctionality4 () {
     echo "Test Functionality 4: changepw with pending message"
     msg=msg4.txt
     msgout=msg4out.txt
-    echo $msg1 > $tmp/$msg
 
     echo "$A sends message to $B"
     ./sendmsg new$certA new$keyA $tmp/$msg
@@ -309,18 +299,10 @@ testfunctionality5 () {
     return 0
 }
 
-badmsg1="MAIL FROM:<$A>
-RCPT TO:<bad$B>
-RCPT TO:<$B>
-Hello $B!
-Love,
-$A"
-
 testfunctionality6 () {
     echo "Test Functionality 6: sendmsg to invalid recipient"
     msg=msg6.txt
     msgout=msg6out.txt
-    echo $badmsg1 > $tmp/$msg
 
     echo "$A sends message to invalid recipient and $B; # expect one invalid recipient error and one success"
     ./sendmsg $certA $keyA $tmp/$msg
@@ -336,17 +318,10 @@ testfunctionality6 () {
     return 0
 }
 
-badmsg2="MAIL FROM:<$A>
-RCPT TO:<$C>
-Hello $C!
-Love,
-$A"
-
 testfunctionality7 () {
     echo "Test Functionality 7: sendmsg to user who has not getcert'd yet"
     msg=msg7.txt
     msgout=msg7out.txt
-    echo $badmsg2 > $tmp/$msg
 
     echo "$A sends message to uncertified recipient; # expect certificate read error"
     ./sendmsg $certA $keyA $tmp/$msg
@@ -425,17 +400,10 @@ testfunctionality () {
 
 # User Impersonation tests
 
-badmsg3="MAIL FROM:<$B>
-RCPT TO:<$C>
-Hello $C!
-Love,
-$A"
-
 testimpersonation () {
     echo "Test Security 1: sendmsg sender impersonation"
     msg=msg8.txt
     msgout=msg8out.txt
-    echo $badmsg3 > $tmp/$msg
 
     echo "$C generates a private key and gets a certificate"
     ./genkey.sh $keyC $keypass
@@ -491,7 +459,6 @@ testTLS1 () {
     echo "Test certificate/key mismatch"
     msg=msg9.txt
     msgout=msg9out.txt
-    echo $msg1 > $tmp/$msg
     echo "$A tries to send message with mismatched certificate/key pair; # expect client certificate verification to fail"
     ./sendmsg $badcert $mismatchkey $tmp/$msg
     # expect $keypassprompt
@@ -510,7 +477,6 @@ testTLS2 () {
     echo "Test certificate signed by the wrong CA"
     msg=msg10.txt
     msgout=msg10out.txt
-    echo $msg1 > $tmp/$msg
     echo "$A tries to send message with certificate signed by another CA; # expect client certificate verification to fail"
     ./sendmsg $badcert $badkey $tmp/$msg
     # expect $keypassprompt
@@ -529,7 +495,6 @@ testTLS3 () {
     echo "Test invalid certificate"
     msg=msg11.txt
     msgout=msg11out.txt
-    echo $msg1 > $tmp/$msg
     echo "$A tries to send message with invalid certificate; # expect client certificate verification to fail"
     ./sendmsg $invalidcert $badkey $tmp/$msg
     # expect $keypassprompt
@@ -548,7 +513,6 @@ testTLS4 () {
     echo "Test invalid key"
     msg=msg12.txt
     msgout=msg12out.txt
-    echo $msg1 > $tmp/$msg
     echo "$A tries to send message with invalid key; # expect client certificate verification to fail"
     ./sendmsg $badcert $invalidkey $tmp/$msg
     # expect $keypassprompt
@@ -574,7 +538,7 @@ testlargemsg () {
     echo "MAIL FROM:<$A>" >> $tmp/$msg
     echo "RCPT TO:<$B>" >> $tmp/$msg
     for i in 1..1000000; do
-        echo "." >> $tmp/$msg
+        printf "." >> $tmp/$msg
     done
 
     echo "___________________________________________________________________________"
@@ -593,14 +557,10 @@ testlargemsg () {
     return 0
 }
 
-smolmsg="MAIL FROM:<$A>
-RCPT TO:<$B>"
-
 testspamsendmsg () {
     echo "Test spam sendmsg to fill up mailbox"
     msg=msg14.txt
     msgout=msg14out.txt
-    echo $smolmsg > $tmp/$msg
 
     echo "Fill up $B's mailbox with 99999 messages"
     for i in 1..99999; do
