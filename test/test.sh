@@ -5,7 +5,7 @@
 # to ensure that permissions are being honored
 
 tmp=../../../test/tmp
-mail=../mail
+mail=../../server/mail
 
 A=addleness
 B=muermo
@@ -34,7 +34,6 @@ msgoutprompt="Enter message output file path:"
 
 cd ../$1/client/bin
 
-rm -f $tmp/msg*.txt
 rm -f $tmp/$A* $tmp/$B* $tmp/$C*
 
 # Functionality tests
@@ -45,8 +44,8 @@ testfunctionality1 () {
     msgout=msg1out.txt
 
     echo "$A and $B generate private keys and certificates"
-    ./genkey.sh $keyA $keypass $certA
-    ./getcert $A $keyA 
+    ./genkey.sh $keyA $keypass
+    ./getcert $A $keyA $certA
     # expect $pwprompt
     # send -- "$pass\r"
 
@@ -63,7 +62,7 @@ testfunctionality1 () {
     # send -- "$keypass\r"
     if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
@@ -74,18 +73,19 @@ testfunctionality1 () {
     # send -- "$keypass\r"
     if [ ! -f "$tmp/$msgout" ]; then
         echo "Error: received message not written to path"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     if [ -f "$mail/$B/00001" ]; then
         echo "Error: message not deleted from $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
-    if [ $(diff $tmp/$msg $tmp/$msgout) != "" ]; then
+    diff=$(diff --strip-trailing-cr $tmp/$msg $tmp/$msgout)
+    if [ "$diff" != "" ]; then
         echo "Error: received message does not match sent message"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -96,8 +96,8 @@ testfunctionality2 () {
     msgout=msg2out.txt
 
     echo "$A generates new private key and changes password to get a new certificate"
-    ./genkey.sh new$keyA $keypass
-    ./changepw $A new$keyA new$certA
+    ./genkey.sh $keyA.new $keypass
+    ./changepw $A $keyA.new $certA.new
     # expect $pwprompt
     # send -- "$pass\r"
     # expect $newpwprompt
@@ -125,7 +125,7 @@ testfunctionality2 () {
     # send -- "$keypass\r"
     if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
@@ -136,18 +136,18 @@ testfunctionality2 () {
     # send -- "$keypass\r"
     if [ -f "$mail/$B/00001" ]; then
         echo "Error: message not deleted from $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
 
     echo "$A sends message to $B with new certificate and new key; # expect message to be sent"
-    ./sendmsg new$certA new$keyA $tmp/$msg
+    ./sendmsg $certA.new $keyA.new $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
     if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
@@ -158,18 +158,19 @@ testfunctionality2 () {
     # send -- "$keypass\r"
     if [ ! -f "$tmp/$msgout" ]; then
         echo "Error: received message not written to path"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     if [ -f "$mail/$B/00001" ]; then
         echo "Error: message not deleted from $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
-    if [ $(diff $tmp/$msg $tmp/$msgout) != "" ]; then
+    diff=$(diff --strip-trailing-cr $tmp/$msg $tmp/$msgout)
+    if [ "$diff" != "" ]; then
         echo "Error: received message does not match sent message"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -180,29 +181,30 @@ testfunctionality3 () {
     msgout=msg3out.txt
 
     echo "$A generates new private key"
-    ./genkey.sh newnew$keyA $keypass
+    ./genkey.sh $keyA.newnew $keypass
     
     echo "___________________________________________________________________________"
 
     echo "$A getcert with new private key; # expect login success with certificate already exists message"
-    ./getcert $A newnew$keyA newnew$certA
+    ./getcert $A $keyA.newnew $certA.newnew
     # expect $pwprompt
     # send -- "new$pass\r"
-    if [ $(diff new$certA newnew$certA) != "" ]; then
+    diff=$(diff --strip-trailing-cr $certA.new $certA.newnew)
+    if [ "$diff" != "" ]; then
         echo "Error: getcert generated a new certificate"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
     
     echo "check that $A's certificate has not changed in the CA"
     echo "$A sends message to $B"
-    ./sendmsg new$certA new$keyA $tmp/$msg
+    ./sendmsg $certA.new $keyA.new $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
     if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     
     echo "___________________________________________________________________________"
@@ -213,18 +215,19 @@ testfunctionality3 () {
     # send -- "$keypass\r"
     if [ ! -f "$tmp/$msgout" ]; then
         echo "Error: received message not written to path"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     if [ -f "$mail/$B/00001" ]; then
         echo "Error: message not deleted from $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
-    if [ $(diff $tmp/$msg $tmp/$msgout) != "" ]; then
+    diff=$(diff --strip-trailing-cr $tmp/$msg $tmp/$msgout)
+    if [ "$diff" != "" ]; then
         echo "Error: received message does not match sent message"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -235,12 +238,12 @@ testfunctionality4 () {
     msgout=msg4out.txt
 
     echo "$A sends message to $B"
-    ./sendmsg new$certA new$keyA $tmp/$msg
+    ./sendmsg $certA.new $keyA.new $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
     if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
     echo "$B tries to change password; # expect pending messages failure"
@@ -250,7 +253,7 @@ testfunctionality4 () {
     # expect $newpwprompt
     # send -- "new$pass\r"
 
-    rm -f $msg $msgout
+    rm -f $msgout
     
     return 0;
 }
@@ -275,10 +278,10 @@ testfunctionality5 () {
     # send -- "$keypass\r"
     if [ -f "$mail/$B/00001" ]; then
         echo "Error: message not deleted from $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
         
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -294,10 +297,10 @@ testfunctionality6 () {
     # send -- "$keypass\r"
     if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -313,10 +316,10 @@ testfunctionality7 () {
     # send -- "$keypass\r"
     if [ -f "$mail/$C/00001" ]; then
         echo "Error: message written to uncertified $C's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -403,7 +406,7 @@ testimpersonation () {
     # send -- "$keypass\r"
     if [ ! -f "$mail/$C/00001" ]; then
         echo "Error: message not written to $C's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
@@ -414,10 +417,10 @@ testimpersonation () {
     # send -- "$keypass\r"
     if [ -f "$mail/$C/00001" ]; then
         echo "Error: message not deleted from $C's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
         
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -445,12 +448,12 @@ testTLS1 () {
     ./sendmsg $badcert $mismatchkey $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
-    if [ -f "$mail/$B/00001" ]; then
+    if [ -f "$mail/$B/00002" ]; then
         echo "Error: message written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -463,12 +466,12 @@ testTLS2 () {
     ./sendmsg $badcert $badkey $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
-    if [ -f "$mail/$B/00001" ]; then
+    if [ -f "$mail/$B/00002" ]; then
         echo "Error: message written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -481,12 +484,12 @@ testTLS3 () {
     ./sendmsg $invalidcert $badkey $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
-    if [ -f "$mail/$B/00001" ]; then
+    if [ -f "$mail/$B/00002" ]; then
         echo "Error: message written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -499,12 +502,12 @@ testTLS4 () {
     ./sendmsg $badcert $invalidkey $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
-    if [ -f "$mail/$B/00001" ]; then
+    if [ -f "$mail/$B/00002" ]; then
         echo "Error: message written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -519,7 +522,7 @@ testlargemsg () {
     echo "write large message"
     echo "MAIL FROM:<$A>" >> $tmp/$msg
     echo "RCPT TO:<$B>" >> $tmp/$msg
-    for i in 1..1000000; do
+    for i in {1..1000000}; do
         printf "." >> $tmp/$msg
     done
 
@@ -529,12 +532,12 @@ testlargemsg () {
     ./sendmsg $certA $keyA $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
-    if [ -f "$mail/$B/00001" ]; then
+    if [ -f "$mail/$B/00002" ]; then
         echo "Error: message written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -544,15 +547,18 @@ testspamsendmsg () {
     msg=msg14.txt
     msgout=msg14out.txt
 
+    echo "Empty $B's mailbox"
+    rm -f $mail/$B/*
+
     echo "Fill up $B's mailbox with 99999 messages"
-    for i in 1..99999; do
+    for i in {1..99999}; do
         ./sendmsg $certA $keyA $tmp/$msg
         # expect $keypassprompt
         # send -- "$keypass\r"
     done
     if [ ! -f "$mail/$B/99999" ]; then
         echo "Error: messages not written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     
     echo "___________________________________________________________________________"
@@ -563,10 +569,10 @@ testspamsendmsg () {
     # send -- "$keypass\r"
     if [ -f "$mail/$B/00000" ]; then
         echo "Error: message written to $B's mailbox"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
 
-    rm -f $msg $msgout
+    rm -f $msgout
 
     return 0
 }
@@ -579,59 +585,59 @@ testsecurity () {
     testimpersonation
     if [ $? -ne 0 ]; then
         echo "Test Impersonation FAILED"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testTLS1
     if [ $? -ne 0 ]; then
         echo "Test TLS 1 FAILED"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testTLS2
     if [ $? -ne 0 ]; then
         echo "Test TLS 2 FAILED"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testTLS3
     if [ $? -ne 0 ]; then
         echo "Test TLS 3 FAILED"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testTLS4
     if [ $? -ne 0 ]; then
         echo "Test TLS 4 FAILED"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testlargemsg
     if [ $? -ne 0 ]; then
         echo "Test Large Message FAILED"
-        rm -f $msg $msgout; return 1
+        rm -f $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
-    testspamsendmsg
-    if [ $? -ne 0 ]; then
-        echo "Test Spam sendmsg FAILED"
-        rm -f $msg $msgout; return 1
-    fi
-    echo "___________________________________________________________________________"
-    echo "___________________________________________________________________________"
-    testspamchangepw
-    if [ $? -ne 0 ]; then
-        echo "Test Spam changepw FAILED"
-        rm -f $msg $msgout; return 1
-    fi
-    echo "___________________________________________________________________________"
-    echo "___________________________________________________________________________"
+    # testspamsendmsg
+    # if [ $? -ne 0 ]; then
+    #     echo "Test Spam sendmsg FAILED"
+    #     rm -f $msgout; return 1
+    # fi
+    # echo "___________________________________________________________________________"
+    # echo "___________________________________________________________________________"
+    # testspamchangepw
+    # if [ $? -ne 0 ]; then
+    #     echo "Test Spam changepw FAILED"
+    #     rm -f $msgout; return 1
+    # fi
+    # echo "___________________________________________________________________________"
+    # echo "___________________________________________________________________________"
     
     echo "ALL SECURITY TESTS PASSED"
     
@@ -644,5 +650,4 @@ testsecurity () {
 testfunctionality
 testsecurity
 
-rm -f $tmp/msg*.txt
 rm -f $tmp/$A* $tmp/$B* $tmp/$C*
