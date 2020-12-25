@@ -8,12 +8,13 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 
 #include "bstrlib.h"
 #include "utf8util.h"
 #include "bstraux.h"
 #include "bsafe.h"
-#include "bstrlibext.h""
+#include "bstrlibext.h"
 #include "utils.h"
 
 #include <openssl/ssl.h>
@@ -132,7 +133,7 @@ int main(int argc, char *argv[]) {
 
     char header[100];
     sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", port, method);
-    char *header 2 = "connection: close\n";
+    char *header2 = "connection: close\n";
     char header3[100];
 
     char usernameLine[sizeof(username)+strlen("username:\n")];
@@ -143,16 +144,16 @@ int main(int argc, char *argv[]) {
     char csrLine[strlen(csr) + strlen("csr:\n")];
     sprintf(csrLine, "csr:%s\n", csr);
 
-    bstring temp = bfromcstr(csrLine);
-    encodeMessage(temp);
-    char *encodedCsrLine = temp->data;
-    bdestroy(temp);
+    bstring tempstring = bfromcstr(csrLine);
+    encodeMessage(tempstring);
+    char *encodedCsrLine = tempstring->data;
+    bdestroy(tempstring);
 
     int contentLength = strlen(usernameLine) + strlen(passwordLine) + strlen(encodedCsrLine) + 1;
+    sprintf(header3, "content-length: %d\n", contentLength);
     sprintf(buffer, "%s%s%s%s%s%s%s%s", header, header2, header3, "\n", usernameLine, passwordLine, encodedCsrLine, "\n");
     SSL_write(ssl, buffer, strlen(buffer));
 
-    SSL_read()
     printf("Enter a path for cert: \n");
     char ibuf[1000];
     memset(ibuf, '\0', sizeof(ibuf));
@@ -160,7 +161,7 @@ int main(int argc, char *argv[]) {
     certif[0] = '\0';
     int state = 0;
     char writePath[100];
-    char *resultCertif;
+    char *resultCertif = '\0';
     while (1) {
         int readReturn = SSL_read(ssl, ibuf, sizeof(ibuf)-1);
         if (readReturn == 0){
@@ -173,11 +174,11 @@ int main(int argc, char *argv[]) {
         } else if ((strstr(ibuf, "400") != NULL) && (state == 0)){
             printf("Error 400: Problem with username, password or key.");
             break;
-        } else if ((state == 1) && (ibuf[0] == "\n")) {
+        } else if ((state == 1) && (ibuf[0] == '\n')) {
             state = 2;
-        } else if ((state == 2) && (ibuf[0] != "\n")) {
+        } else if ((state == 2) && (ibuf[0] != '\n')) {
             sprintf(certif+strlen(certif), ibuf);
-        } else if ((state == 2) && (ibuf[0] == "\n")) {
+        } else if ((state == 2) && (ibuf[0] == '\n')) {
             break;
         }
     }

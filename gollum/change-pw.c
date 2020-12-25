@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include<sys/wait.h>
+#include <sys/wait.h>
 
 #include "bstrlib.h"
 #include "utf8util.h"
