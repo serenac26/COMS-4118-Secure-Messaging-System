@@ -309,17 +309,33 @@ int main(int argc, char *argv[]) {
     }
     code[sizeof(code) - 1] = '\0';
     int state = 0;
-
-    while ((strstr(code, "200") != NULL)) {
-      state = 1;
-      char buf[2];
-      readReturn = SSL_read(ssl, buf, 1);
-      buf[1] = '\0';
-      if (SSL_pending(ssl) == 0) {
-        break;
+    if (strstr(code, "200") != NULL) {
+      while (1) {
+        state = 1;
+        char buf[2];
+        readReturn = SSL_read(ssl, buf, 1);
+        buf[1] = '\0';
+        if (SSL_pending(ssl) == 0) {
+          break;
+        }
+        sprintf(response + strlen(response), "%s", buf);
       }
-      sprintf(response + strlen(response), "%s", buf);
+    } else if (strstr(code, "-2") != NULL) {
+      fprintf(stderr, "Error: Invalid Recipient\n");
+      // remove(r_certfile);
+      // free(response);
+      // response = NULL;
+      // curr = curr->next;
+      // continue;
+    } else if (strstr(code, "-3") != NULL) {
+      fprintf(stderr, "Error: Could not retrieve certificate\n");
+      // remove(r_certfile);
+      // free(response);
+      // response = NULL;
+      // curr = curr->next;
+      // continue;
     }
+    
     if ((state == 1) && (response != NULL)) {
       bstring bresponse = bfromcstr(response);
       struct bstrList *lines = bsplit(bresponse, '\n');
@@ -460,12 +476,13 @@ int main(int argc, char *argv[]) {
       break;
     }
     codesm[sizeof(codesm) - 1] = '\0';
-    if (strstr(codesm, "200") == NULL) {
-      fprintf(stderr, "Could not send message to recipient: %s\n.",
-              (char *)r->data);
-    } else {
+    if (strstr(codesm, "200") != NULL) {
       sent++;
-    }
+    } else if (strstr(codesm, "-3") != NULL) {
+      fprintf(stderr, "Error: Could not send message\n");      
+    } else if (strstr(codesm, "-4") != NULL) {
+      fprintf(stderr, "Error: Mailbox Full\n");      
+    } 
 
     free(buffer);
     buffer = NULL;

@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
   code[sizeof(code)-1] = '\0';
   printf("Code: %s\n", code);
   int state = 0;
-  while ((strstr(code, "200") != NULL || 1)) {
+  while (1) {
     state = 1;
     char buf[2];
     readReturn = SSL_read(ssl, buf, 1);
@@ -193,6 +193,17 @@ int main(int argc, char *argv[]) {
       break;
     }
     sprintf(response+strlen(response), "%s", buf);
+  }
+  if (strstr(code, "-2") != NULL) {
+    fprintf(stderr, "Error: Invalid Sender\n");
+    // free(response);
+    // response = NULL;
+    // return -1;
+  } else if (strstr(code, "-3") != NULL) {
+    fprintf(stderr, "Error: Could not retrieve certificate\n");
+    // free(response);
+    // response = NULL;
+    // return -1;
   }
   printf("%s\n", response);
   if ((state == 1) && (response != NULL)) {
@@ -346,16 +357,22 @@ int main(int argc, char *argv[]) {
     }
     code2[sizeof(code2)-1] = '\0';
     state = 0;
-    while ((strstr(code2, "200") != NULL)) {
-      state = 1;
-      char buf[2];
-      readReturn = SSL_read(ssl, buf, 1);
-      buf[1] = '\0';
-      if (readReturn == 0) {
-        break;
+    if (strstr(code2, "200") != NULL) {
+      while (1) {
+        state = 1;
+        char buf[2];
+        readReturn = SSL_read(ssl, buf, 1);
+        buf[1] = '\0';
+        if (readReturn == 0) {
+          break;
+        }
+        sprintf(response+strlen(response), "%s", buf);
       }
-      sprintf(response+strlen(response), "%s", buf);
-    }
+    } else if (strstr(code2, "-3") != NULL) {
+      fprintf(stderr, "Error: Could not send message\n");      
+    } else if (strstr(code2, "-5") != NULL) {
+      fprintf(stderr, "Error: No Messages\n");      
+    } 
     if ((state == 1) && (response != NULL)) {
       bstring bresponse = bfromcstr(response);
       struct bstrList *lines = bsplit(bresponse, '\n');
