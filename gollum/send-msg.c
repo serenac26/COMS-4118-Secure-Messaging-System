@@ -364,6 +364,17 @@ int main(int argc, char *argv[]) {
         continue;
       }
       fp = fopen(r_certfile, "w");
+      if (!fp) {
+        remove(r_certfile);
+        free(response);
+        response = NULL;
+        bdestroy(bresponse);
+        bdestroy(bkey);
+        bdestroy(bvalue);
+        bstrListDestroy(lines);
+        curr = curr->next;
+        continue;
+      }
       fputs((char *)bvalue->data, fp);
       fclose(fp);
       fp = NULL;
