@@ -446,8 +446,8 @@ int main(int mama, char **moo) {
       pf("state: %d bytes-read: %d line: %s\n", state, readReturn, rbuf);
       if (readReturn == 0) {
         SSL_err = SSL_get_error(ssl, readReturn);
-        pb("error: %d %d\n", SSL_err, errno);
-        +pb("%d %d %d\n", SSL_err, SSL_ERROR_SYSCALL, SSL_ERROR_SSL);
+        pf("error: %d %d\n", SSL_err, errno);
+        pf("%d %d %d\n", SSL_err, SSL_ERROR_SYSCALL, SSL_ERROR_SSL);
         break;
       } else if (readReturn == sizeof(rbuf) - 1 && state != 2) {
         sendBad(ssl, ERR_BAD_REQUEST, ERR_BAD_REQUEST_MSG, ERR_TOO_LONG);
@@ -788,7 +788,7 @@ int main(int mama, char **moo) {
       }
     }
 
-    pb("%d %d %d\n", SSL_err, SSL_ERROR_SYSCALL, SSL_ERROR_SSL);
+    pf("%d %d %d\n", SSL_err, SSL_ERROR_SYSCALL, SSL_ERROR_SSL);
     if (SSL_err != SSL_ERROR_SYSCALL && SSL_err != SSL_ERROR_SSL)
       SSL_shutdown(ssl);
     SSL_free(ssl);
