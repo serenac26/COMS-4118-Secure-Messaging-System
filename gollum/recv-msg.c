@@ -22,11 +22,19 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
+#define cleanup         \
+    close(sock);        \
+    SSL_shutdown(ssl);  \
+    SSL_free(ssl);      \
+    SSL_CTX_free(ctx);  \
+    EVP_cleanup();            
+
 #define CA_CHAIN "../ca-chain.cert.pem"
 #define SENDER_CERTIFICATE "../tmp/sender.cert.pem"
 #define UNSIGNED_ENCRYPTED_MSG "../tmp/unsigned.encrypted.msg"
 #define UNSIGNED_DECRYPTED_MSG "../tmp/unsigned.decrypted.msg"
 #define SIGNED_ENCRYPTED_MSG "../tmp/signed.encrypted.msg"
+#define VERIFIED_ENCRYPTED_MSG "../tmp/verified.encrypted.msg"
 
 #define GETUSERCERT "getusercert"
 #define RECEIVEMESSAGE "receivemsg"
@@ -77,6 +85,7 @@ int main(int argc, char *argv[]) {
   char *unsigned_encrypted_file = UNSIGNED_ENCRYPTED_MSG;
   char *unsigned_decrypted_file = UNSIGNED_DECRYPTED_MSG;
   char *signed_encrypted_file = SIGNED_ENCRYPTED_MSG;
+  char *verified_encrypted_file = VERIFIED_ENCRYPTED_MSG;
 
   if (argc != 4) {
     fprintf(stderr, "bad arg count; usage: recv-msg <cert-file> <key-file> <msg-out-file>\n");
@@ -158,7 +167,7 @@ int main(int argc, char *argv[]) {
   char rmheader[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, RECEIVEMESSAGE)];
   sprintf(rmheader, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, RECEIVEMESSAGE);
   char *rmheader2 = "connection: keep-alive\n";
-  char *rmheader3 = "content-length: 0\n";
+  char *rmheader3 = "content-length: 1\n";
   
   SSL_write(ssl, rmheader, strlen(rmheader));
   SSL_write(ssl, rmheader2, strlen(rmheader2));
@@ -171,6 +180,7 @@ int main(int argc, char *argv[]) {
   response = (char *)malloc(MB);
   if (!response) {
     fprintf(stderr, "Malloc failed.\n");
+    cleanup;
     return -1;
   }
   *response = '\0';
@@ -179,22 +189,22 @@ int main(int argc, char *argv[]) {
   if (readReturn == 0) {
     free(response);
     response = NULL;
+    cleanup;
     return -1;
   }
   code[sizeof(code)-1] = '\0';
   printf("Code: %s\n", code);
   int state = 0;
-  while ((strstr(code, "200") != NULL || 1)) {
+  while ((strstr(code, "200") != NULL)) {
     state = 1;
     char buf[2];
     readReturn = SSL_read(ssl, buf, 1);
     buf[1] = '\0';
-    if (readReturn == 0) {
+    if (SSL_pending(ssl) == 0) {
       break;
     }
     sprintf(response+strlen(response), "%s", buf);
   }
-  printf("%s\n", response);
   if ((state == 1) && (response != NULL)) {
     bstring bresponse = bfromcstr(response);
     struct bstrList *lines = bsplit(bresponse, '\n');
@@ -207,6 +217,7 @@ int main(int argc, char *argv[]) {
       bdestroy(bkey);
       bdestroy(bvalue);
       bstrListDestroy(lines);
+      cleanup;
       return -1;
     }
     if (0 != bstrccmp(bkey, "message")) {
@@ -216,34 +227,47 @@ int main(int argc, char *argv[]) {
       bdestroy(bkey);
       bdestroy(bvalue);
       bstrListDestroy(lines);
+      cleanup;
       return -1;
     }
     fp = fopen(signed_encrypted_file, "w");
+    if (!fp) {
+      free(response);
+      response = NULL;
+      bdestroy(bresponse);
+      bdestroy(bkey);
+      bdestroy(bvalue);
+      bstrListDestroy(lines);
+      cleanup;
+      return -1;
+    }
     fputs((char *)bvalue->data, fp);
     fclose(fp);
     fp = NULL;
-    free(response);
-    response = NULL;
     bdestroy(bresponse);
     bdestroy(bkey);
     bdestroy(bvalue);
     bstrListDestroy(lines);
   }
-  
+  free(response);
+  response = NULL;
+
 
   // Get encrypted message from signed.encrypted.msg without verifying and write to temp file unsigned.encrypted.msg
   if (0 != verifyunsign(signed_encrypted_file, unsigned_encrypted_file)) {
-    // remove(signed_encrypted_file);
+    remove(signed_encrypted_file);
     remove(unsigned_encrypted_file);
+    cleanup;
     return -1;
   }
 
 
   // Decrypt unsigned.encrypted.msg using recipient's private key and write to temp file unsigned.decrypted.msg
   if (0 != decryptmsg(certfile, keyfile, unsigned_encrypted_file, unsigned_decrypted_file)) {
-    // remove(signed_encrypted_file);
+    remove(signed_encrypted_file);
     remove(unsigned_encrypted_file);
     remove(unsigned_decrypted_file);
+    cleanup;
     return -1;
   }
   remove(unsigned_encrypted_file);
@@ -255,7 +279,8 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "%s\n", unsigned_decrypted_file);
     perror("File open error");
     remove(unsigned_decrypted_file);
-    // remove(signed_encrypted_file);
+    remove(signed_encrypted_file);
+    cleanup;
     return -1;
   }
 
@@ -265,7 +290,8 @@ int main(int argc, char *argv[]) {
     regfree(&mailfrom);
     fclose(fp);
     remove(unsigned_decrypted_file);
-    // remove(signed_encrypted_file);
+    remove(signed_encrypted_file);
+    cleanup;
     return -1;
   }
 
@@ -276,7 +302,8 @@ int main(int argc, char *argv[]) {
     regfree(&mailfrom);
     fclose(fp);
     remove(unsigned_decrypted_file);
-    // remove(signed_encrypted_file);
+    remove(signed_encrypted_file);
+    cleanup;
     return -1;
   }
   int ismblong = inp->slen == MB;
@@ -286,7 +313,8 @@ int main(int argc, char *argv[]) {
     regfree(&mailfrom);
     fclose(fp);
     remove(unsigned_decrypted_file);
-    // remove(signed_encrypted_file);
+    remove(signed_encrypted_file);
+    cleanup;
     return -1;
   }
   regmatch_t mailfrommatch[2];
@@ -297,7 +325,8 @@ int main(int argc, char *argv[]) {
     regfree(&mailfrom);
     fclose(fp);
     remove(unsigned_decrypted_file);
-    // remove(signed_encrypted_file);
+    remove(signed_encrypted_file);
+    cleanup;
     return -1;
   }
   bstring sender = bmidstr(inp, mailfrommatch[1].rm_so, mailfrommatch[1].rm_eo - mailfrommatch[1].rm_so);
@@ -308,111 +337,130 @@ int main(int argc, char *argv[]) {
 
 
   // Send sender name to server /getusercert
-
-    char gucheader[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, GETUSERCERT)];
-    sprintf(gucheader, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, GETUSERCERT);
-    char *gucheader2 = "connection: keep-alive\n";
-    char gucrecipientLine[snprintf(0, 0, "recipient:%s\n", (char *)sender->data)];
-    sprintf(gucrecipientLine, "recipient:%s\n", (char *)sender->data);
-    char gucheader3[snprintf(0, 0, "content-length: %ld\n", strlen(gucrecipientLine))];
-    sprintf(gucheader3, "content-length: %ld\n", strlen(gucrecipientLine));
-    
-    SSL_write(ssl, gucheader, strlen(gucheader));
-    SSL_write(ssl, gucheader2, strlen(gucheader2));
-    SSL_write(ssl, gucheader3, strlen(gucheader3));
-    SSL_write(ssl, "\n", strlen("\n"));
-    SSL_write(ssl, gucrecipientLine, strlen(gucrecipientLine));
-    SSL_write(ssl, "\n", strlen("\n"));
+  char gucheader[snprintf(0, 0, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, GETUSERCERT)];
+  sprintf(gucheader, "post https://localhost:%d/%s HTTP/1.1\n", BOROMAIL_PORT, GETUSERCERT);
+  char *gucheader2 = "connection: keep-alive\n";
+  char gucrecipientLine[snprintf(0, 0, "recipient:%s\n", (char *)sender->data)];
+  sprintf(gucrecipientLine, "recipient:%s\n", (char *)sender->data);
+  char gucheader3[snprintf(0, 0, "content-length: %ld\n", strlen(gucrecipientLine))];
+  sprintf(gucheader3, "content-length: %ld\n", strlen(gucrecipientLine));
+  
+  SSL_write(ssl, gucheader, strlen(gucheader));
+  SSL_write(ssl, gucheader2, strlen(gucheader2));
+  SSL_write(ssl, gucheader3, strlen(gucheader3));
+  SSL_write(ssl, "\n", strlen("\n"));
+  SSL_write(ssl, gucrecipientLine, strlen(gucrecipientLine));
 
 
-    // Server sends back recipient certificate which we write to temp file s_certfile 
-    response = (char *)malloc(MB);
-    if (!response) {
+  // Server sends back recipient certificate which we write to temp file s_certfile 
+  response = (char *)malloc(MB);
+  if (!response) {
+    remove(s_certfile);
+    bdestroy(sender);
+    cleanup;
+    return -1;
+  }
+  *response = '\0';
+  char code2[4];
+  readReturn = SSL_peek(ssl, code2, sizeof(code2)-1);
+  if (readReturn == 0) {
+    remove(s_certfile);
+    bdestroy(sender);
+    free(response);
+    response = NULL;
+    cleanup;
+    return -1;
+  }
+  code2[sizeof(code2)-1] = '\0';
+  state = 0;
+  while ((strstr(code2, "200") != NULL)) {
+    state = 1;
+    char buf[2];
+    readReturn = SSL_read(ssl, buf, 1);
+    buf[1] = '\0';
+    if (SSL_pending(ssl) == 0) {
+      break;
+    }
+    sprintf(response+strlen(response), "%s", buf);
+  }
+  if ((state == 1) && (response != NULL)) {
+    bstring bresponse = bfromcstr(response);
+    struct bstrList *lines = bsplit(bresponse, '\n');
+    bstring bkey = bfromcstr("");
+    bstring bvalue = bfromcstr("");
+    if (0 != deserializeData(bkey, bvalue, lines->entry[4], 1)) {
       remove(s_certfile);
-      bdestroy(sender);
-      free(response);
-      response = NULL;
-      return -1;
-    }
-    *response = '\0';
-    char code2[4];
-    readReturn = SSL_peek(ssl, code2, sizeof(code2)-1);
-    if (readReturn == 0) {
-      remove(s_certfile);
-      bdestroy(sender);
-      free(response);
-      response = NULL;
-      return -1;
-    }
-    code2[sizeof(code2)-1] = '\0';
-    state = 0;
-    while ((strstr(code2, "200") != NULL)) {
-      state = 1;
-      char buf[2];
-      readReturn = SSL_read(ssl, buf, 1);
-      buf[1] = '\0';
-      if (readReturn == 0) {
-        break;
-      }
-      sprintf(response+strlen(response), "%s", buf);
-    }
-    if ((state == 1) && (response != NULL)) {
-      bstring bresponse = bfromcstr(response);
-      struct bstrList *lines = bsplit(bresponse, '\n');
-      bstring bkey = bfromcstr("");
-      bstring bvalue = bfromcstr("");
-      if (0 != deserializeData(bkey, bvalue, lines->entry[4], 1)) {
-        remove(s_certfile);
-        free(response);
-        response = NULL;
-        bdestroy(bresponse);
-        bdestroy(bkey);
-        bdestroy(bvalue);
-        bstrListDestroy(lines);
-        bdestroy(sender);
-        return -1;
-      }
-      if (0 != bstrccmp(bkey, "certificate")) {
-        remove(s_certfile);
-        free(response);
-        response = NULL;
-        bdestroy(bresponse);
-        bdestroy(bkey);
-        bdestroy(bvalue);
-        bstrListDestroy(lines);
-        bdestroy(sender);
-        return -1;
-      }
-      fp = fopen(s_certfile, "w");
-      fputs((char *)bvalue->data, fp);
-      fclose(fp);
-      fp = NULL;
       free(response);
       response = NULL;
       bdestroy(bresponse);
       bdestroy(bkey);
       bdestroy(bvalue);
       bstrListDestroy(lines);
+      bdestroy(sender);
+      cleanup;
+      return -1;
     }
+    if (0 != bstrccmp(bkey, "certificate")) {
+      remove(s_certfile);
+      free(response);
+      response = NULL;
+      bdestroy(bresponse);
+      bdestroy(bkey);
+      bdestroy(bvalue);
+      bstrListDestroy(lines);
+      bdestroy(sender);
+      cleanup;
+      return -1;
+    }
+    fp = fopen(s_certfile, "w");
+    if (!fp) {
+      free(response);
+      response = NULL;
+      bdestroy(bresponse);
+      bdestroy(bkey);
+      bdestroy(bvalue);
+      bstrListDestroy(lines);
+      cleanup;
+      return -1;
+    }
+    fputs((char *)bvalue->data, fp);
+    fclose(fp);
+    fp = NULL;
+    free(response);
+    response = NULL;
+    bdestroy(bresponse);
+    bdestroy(bkey);
+    bdestroy(bvalue);
+    bstrListDestroy(lines);
+  }
 
 
   // Verify sender of signed-message using sender.cert.pem and 
-  // write the decrypted message to the specified output file
-  if (0 != verifysign(s_certfile, signed_encrypted_file, msgoutfile)) {
-    // remove(signed_encrypted_file);
-    // remove(s_certfile);
+  // write the decrypted message to verified_encrypted_file
+  if (0 != verifysign(s_certfile, signed_encrypted_file, verified_encrypted_file)) {
+    remove(signed_encrypted_file);
+    remove(s_certfile);
     bdestroy(sender);
+    cleanup;
+    return -1;
+  }
+  remove(signed_encrypted_file);
+
+
+  // Decrypt unsigned.encrypted.msg using recipient's private key and write to msgoutfile
+  if (0 != decryptmsg(certfile, keyfile, verified_encrypted_file, msgoutfile)) {
+    remove(signed_encrypted_file);
+    remove(verified_encrypted_file);
+    remove(s_certfile);
+    bdestroy(sender);
+    cleanup;
     return -1;
   }
   printf("Wrote message to: %s\n", msgoutfile);
 
-  // remove(signed_encrypted_file);
-  // remove(s_certfile);
+  remove(verified_encrypted_file);
+  remove(s_certfile);
   bdestroy(sender);
-
-  // Cleanup at the end
-  close(sock);
-  SSL_CTX_free(ctx);
-  EVP_cleanup();
+  cleanup;
   return 0;
 }

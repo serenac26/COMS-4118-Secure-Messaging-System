@@ -118,7 +118,7 @@ int parseVerbLine(char *data, struct VerbLine *vl) {
     int j = i + match[5].rm_so;
     vl->version[i] = data[j];
   }
-  
+
   return 0;
 }
 
@@ -183,8 +183,7 @@ int parseSubject(char *data, bstring result) {
   regex_t reg;
   int value;
 
-  value = regcomp(&reg, ".*/CN=(.*)",
-                  REG_EXTENDED | REG_ICASE);
+  value = regcomp(&reg, ".*/CN=(.*)", REG_EXTENDED | REG_ICASE);
   if (value != 0) {
     pb("Regex did not compile successfully\n");
   }
@@ -311,8 +310,7 @@ void sendBad(SSL *ssl, void *content) {
   bdestroy(toSend);
 }
 
-int pw_cb(char *buf, int size, int rwflag, void *u)
-{
+int pw_cb(char *buf, int size, int rwflag, void *u) {
   strncpy(buf, (char *)u, size);
   buf[size - 1] = '\0';
   return strlen(buf);
@@ -706,8 +704,9 @@ int main(int mama, char **moo) {
           free(_subject);
 
           struct bstrList *lines = bsplit(bdata, '\n');
-          if (lines->qty != 1) {
-            sendBad(ssl, ERR_MALFORMED_REQUEST);
+          if (lines->qty != 2) {
+            SSL_write(ssl, ERR_MALFORMED_REQUEST,
+                      strlen(ERR_MALFORMED_REQUEST));
             bstrListDestroy(lines);
             connection = 2;
             goto cleanup;
@@ -722,8 +721,21 @@ int main(int mama, char **moo) {
             connection = 2;
             goto cleanup;
           }
-
-          sendGood(ssl, connection, msg, code);
+          bstring messageKey = bfromcstr("message");
+          bstring messageValue = bfromcstr(msg);
+          bstring messageData = bfromcstr("");
+          if (serializeData(messageKey, messageValue, messageData, 1) != 0) {
+            bdestroy(messageKey);
+            bdestroy(messageValue);
+            bdestroy(messageData);
+            sendBad(ssl, ERR_MALFORMED_REQUEST);
+            connection = 2;
+            goto cleanup;
+          };
+          bdestroy(messageKey);
+          bdestroy(messageValue);
+          sendGood(ssl, connection, messageData->data, code);
+          bdestroy(messageData);
           free(msg);
         } else {
           sendBad(ssl, ERR_MALFORMED_REQUEST);
