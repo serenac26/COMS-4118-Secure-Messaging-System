@@ -10,6 +10,12 @@
 #include <stdlib.h>
 #include<sys/wait.h>
 
+#include "bstrlib.h"
+#include "utf8util.h"
+#include "bstraux.h"
+#include "bsafe.h"
+#include "bstrlibext.h"
+#include "utils.h"
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
@@ -165,7 +171,7 @@ sbio=BIO_new(BIO_s_socket());
     certif[0] = '\0';
     int state = 0;
     char writePath[100];
-    char *resultCertif;
+    char *resultCertif = '\0';
     while (1) {
         int readReturn = SSL_read(ssl, ibuf, sizeof(ibuf)-1);
         if (readReturn == 0) {
@@ -178,11 +184,11 @@ sbio=BIO_new(BIO_s_socket());
         } else if ((strstr(ibuf, "400") != NULL) && (state == 0)) {
             printf("Error 400: Problem with username, password or key.");
             break;
-        } else if ((state == 1) && (ibuf[0] == "\n")) {
+        } else if ((state == 1) && (ibuf[0] == '\n')) {
             state = 2;
-        } else if ((state == 2) && (ibuf[0] != "\n")) {
+        } else if ((state == 2) && (ibuf[0] != '\n')) {
             sprintf(certif + strlen(certif), ibuf);
-        } else if ((state == 2) && (ibuf[0] == "\n")) {
+        } else if ((state == 2) && (ibuf[0] == '\n')) {
             break;
         }
     }
