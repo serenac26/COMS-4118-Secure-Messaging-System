@@ -1,6 +1,6 @@
 # Tests 
 
-### Functionality Tests
+## Functionality Tests
 
 Test Case 1:
 end to end with no funny business
@@ -124,7 +124,3 @@ Test Case 1:
 Test Case 2:
 * spam sendmsg to a single recipient to fill their mailbox with >99999 messages
     * client should get an error from server when the mailbox is full
-
-### File Permissions
-
-Test Case 1:
