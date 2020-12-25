@@ -144,11 +144,16 @@ sbio=BIO_new(BIO_s_socket());
     sprintf(newPasswordLine, "newpassword:%s\n", newPassword);
     char csrLine[strlen(csr) + strlen("csr:\n")];
     sprintf(csrLine, "csr:%s\n", csr);
-
+    bstring tempstring = bfromcstr(csrLine);
+    bstring bkey = bfromcstr("");
+    bstring bvalue = bfromcstr("");
+    serializeData(bkey, bvalue, tempstring, 1);
+    char *encodedCsrLine = bvalue->data;
+    bdestroy(tempstring);
    //+1 for new line
-    int contentLength = strlen(usernameLine) + strlen(passwordLine) + strlen(newPasswordLine) + strlen(csrLine) + 1;
+    int contentLength = strlen(usernameLine) + strlen(passwordLine) + strlen(newPasswordLine) + strlen(encodedCsrLine) + 1;
     sprintf(header3, "content-length: %d\n", contentLength);
-    sprintf(buffer, "%s%s%s%s%s%s%s%s%s", header, header2, header3, "\n", usernameLine, passwordLine, newPasswordLine, csrLine, "\n");
+    sprintf(buffer, "%s%s%s%s%s%s%s%s%s", header, header2, header3, "\n", usernameLine, passwordLine, newPasswordLine, encodedCsrLine, "\n");
     SSL_write(ssl, buffer, strlen(buffer));
     //read buff
     //check for 200 okay
@@ -190,7 +195,7 @@ sbio=BIO_new(BIO_s_socket());
         bstring bkey1 = bfromcstr("");
         bstring bvalue1 = bfromcstr("");
         deserializeData(bkey1, bvalue1, temp1, 1);
-        resultCertif = temp->data;
+        resultCertif = bvalue1->data;
         FILE *fp;
         fp = fopen(writePath, "w+");
         fputs(resultCertif+12, fp);
@@ -200,7 +205,6 @@ sbio=BIO_new(BIO_s_socket());
         bdestroy(bvalue1);
         printf("Wrote certification to: %s\n", writePath);
     }
-    free(privatekey);
     free(csr);
     free(buffer);
     free(sbio);

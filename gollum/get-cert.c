@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
     bstring tempstring = bfromcstr(csrLine);
     bstring bkey = bfromcstr("");
     bstring bvalue = bfromcstr("");
-    serializeData(gkey, bvalue, tempstring, 1);
+    serializeData(bkey, bvalue, tempstring, 1);
     char *encodedCsrLine = bvalue->data;
     bdestroy(tempstring);
     
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
             break;
         }
         else if ((strstr(ibuf, "-3") != NULL) && (state == 0)) {
-            printf("Error -3: Opening file or directory error")
+            printf("Error -3: Opening file or directory error");
         }
        else if ((strstr(ibuf, "-5") != NULL) && (state == 0)) {
             printf("Warning: Certificate exists already!");
@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
         bstring bkey1 = bfromcstr("");
         bstring bvalue1 = bfromcstr("");
         deserializeData(bkey1, bvalue1, temp1, 1);
-        resultCertif = temp->data;
+        resultCertif = bvalue1->data;
         FILE *fp;
         fp = fopen(writePath, "w+");
         fputs(resultCertif, fp);
@@ -207,7 +207,6 @@ int main(int argc, char *argv[]) {
         bdestroy(temp1);
     }
 
-    free(privatekey);
     free(csr);
     free(buffer);
     free(sbio);
