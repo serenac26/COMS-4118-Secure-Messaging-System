@@ -11,7 +11,7 @@ groupadd -f mout
 groupadd -f vsin 
 groupadd -f vuse 
 
-chown -hR root:root $1/server
+# chown -hR root:root $1/server
 chown -hR root:ring $1/client
 
 chmod -R u=rwx,g=,o= $1

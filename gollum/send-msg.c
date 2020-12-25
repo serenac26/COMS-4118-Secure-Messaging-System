@@ -27,7 +27,7 @@
 #define SIGNED_ENCRYPTED_MSG "../tmp/signed.encrypted.msg"
 
 #define GETUSERCERT "getusercert"
-#define SENDMESSAGE "sendmessage"
+#define SENDMESSAGE "sendmsg"
 
 #define RCPTTO_REGEX "^\\.?rcpt to:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
 #define MAILFROM_REGEX "^\\.?mail from:<([a-z0-9\\+\\-_]+)>[\r]*\n$"
@@ -355,7 +355,6 @@ int main(int argc, char *argv[]) {
       bdestroy(bkey);
       bdestroy(bvalue);
       bstrListDestroy(lines);
-      printf("Wrote certificate to: %s\n", r_certfile);
     }
 
 

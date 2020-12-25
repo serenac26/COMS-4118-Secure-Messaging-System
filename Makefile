@@ -54,6 +54,7 @@ pemithor: pemithor.o
 boromail: boromail.o utils.o boromailutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o boromailutils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
+	sudo cp boromail $(TREE)/server/bin
 
 faramail: faramail.o utils.o faramailutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
