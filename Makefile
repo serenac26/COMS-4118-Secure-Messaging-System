@@ -80,7 +80,7 @@ servercomponents: verifysign msgout
 	sudo mv $^ $(TREE)/server/bin
 # End testing
 	
-client: sendmsg recvmsg
+client: sendmsg recvmsg getcert changepw
 	sudo mv $^ $(TREE)/client/bin
 	sudo cp $(GOLLUM)/makecsr.sh $(GOLLUM)/genkey.sh $(TREE)/client/bin
 	sudo cp imopenssl.cnf $(TREE)/client

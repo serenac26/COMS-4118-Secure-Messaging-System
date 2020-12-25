@@ -109,6 +109,9 @@ int getMessageFilename(bstring recip, bstring filename) {
   while (stat((char *)_filename->data, &filestat) == 0) {
     bdestroy(_filename);
     file_count++;
+    if (file_count > 99999) {
+      return -2;
+    }
     _filename = bformat("../mail/%s/%05d", recip->data, file_count);
   }
 

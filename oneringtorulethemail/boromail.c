@@ -34,6 +34,9 @@
 #define ERR_NO_MSG (-1)
 #define ERR_INVALID_RCPT (-2)
 #define ERR_OPEN (-3)
+#define ERR_MAILBOX_FULL (-4)
+
+#define KEYPASS "pass"
 
 #define pb(...)           \
   if (DEBUG) {            \
@@ -76,6 +79,8 @@ int parseVerbLine(char *data, struct VerbLine *vl) {
   regmatch_t match[6];
   int test = regexec(&reg, data, 6, match, 0);
 
+  regfree(&reg);
+
   if (test == REG_NOMATCH)
     return 1;
   else if (match[1].rm_eo - match[1].rm_so >= sizeof(vl->verb))
@@ -111,8 +116,7 @@ int parseVerbLine(char *data, struct VerbLine *vl) {
     int j = i + match[5].rm_so;
     vl->version[i] = data[j];
   }
-
-  regfree(&reg);
+  
   return 0;
 }
 
@@ -139,6 +143,8 @@ int parseOptionLine(char *data, struct OptionLine *ol) {
   regmatch_t match[3];
   int test = regexec(&reg, data, 3, match, 0);
 
+  regfree(&reg);
+
   if (test == REG_NOMATCH)
     return 1;
   else if (match[1].rm_eo - match[1].rm_so >= sizeof(ol->header))
@@ -159,7 +165,6 @@ int parseOptionLine(char *data, struct OptionLine *ol) {
     ol->value[i] = data[j];
   }
 
-  regfree(&reg);
   return 0;
 }
 
@@ -184,6 +189,8 @@ int parseSubject(char *data, bstring result) {
   regmatch_t match[2];
   int test = regexec(&reg, data, 2, match, 0);
 
+  regfree(&reg);
+
   if (test == REG_NOMATCH) return 1;
 
   bstring bdata = bfromcstr(data);
@@ -193,7 +200,6 @@ int parseSubject(char *data, bstring result) {
   bassign(result, _result);
   bdestroy(_result);
 
-  regfree(&reg);
   return 0;
 }
 
@@ -264,6 +270,8 @@ int handleSendMsg(bstring recipient, bstring msg) {
   int ret = sendmessage(recipient, msg);
   if (ret == -1) {
     return ERR_OPEN;
+  } else if (ret == -2) {
+    return ERR_MAILBOX_FULL;
   }
   return 0;
 }
@@ -301,6 +309,13 @@ void sendBad(SSL *ssl, void *content) {
   bdestroy(toSend);
 }
 
+int pw_cb(char *buf, int size, int rwflag, void *u)
+{
+  strncpy(buf, (char *)u, size);
+  buf[size - 1] = '\0';
+  return strlen(buf);
+}
+
 // Refer to:
 // http://h30266.www3.hpe.com/odl/axpos/opsys/vmsos84/BA554_90007/ch04s03.html
 // and https://wiki.openssl.org/index.php/Simple_TLS_Server for more information
@@ -317,6 +332,9 @@ int main(int mama, char **moo) {
   // Only accept the LATEST and GREATEST in TLS
   SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
   SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
+
+  SSL_CTX_set_default_passwd_cb(ctx, pw_cb);
+  SSL_CTX_set_default_passwd_cb_userdata(ctx, KEYPASS);
 
   if (SSL_CTX_use_certificate_file(ctx,
                                    "../ca/intermediate/certs/boromail.cert.pem",
@@ -737,6 +755,7 @@ int main(int mama, char **moo) {
     SSL_shutdown(ssl);
     SSL_free(ssl);
     close(client);
+    if (DEBUG && strcmp(vl.version, "die") == 0) break;
   }
 
   close(sock);

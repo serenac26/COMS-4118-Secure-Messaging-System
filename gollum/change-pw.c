@@ -8,16 +8,32 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
+
+#include "bstrlib.h"
+#include "utf8util.h"
+#include "bstraux.h"
+#include "bsafe.h"
+#include "bstrlibext.h"
+#include "utils.h"
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
-int main(int argc, char *argv) {
-    char *username = getpass("Enter username: ");
+#define BUF_SIZE 100
+
+//./change-pw <username> <privatekeyfile> 
+int main(int argc, char *argv[]) {
+
+    if (argc != 3) {
+        fprintf(stderr, "bad arg count; usage: change-pw <username> <key-file>\n");
+		return 1;
+    }
+    char *username = argv[1];
     char *password = getpass("Enter old password: ");
-    char *newkeyfile = getpass("Enter new privatekey file: ");
-    char *newpassword = getpass("Enter new password: ");
+    char *newkeyfile = argv[2];
+    char *newPassword = getpass("Enter new password: ");
 //make csr with new private key and password 
 //username /password/newpassword/csr 
 //write new certificate
@@ -25,24 +41,13 @@ int main(int argc, char *argv) {
         printf("input too large: must be 32 or less characters\n");
     }
 
-    FILE *fp;
-    fp = fopen(newkeyfile, "r+");
-    fseek(fp, 0, SEEK_END);
-    long fsize = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    char *privatekey = malloc(fsize +1);
-    fread(privatekey, 1, fsize, fp);
-    fclose(fp);
-    privatekey[fsize] = 0;
-
     char *tempfile = "temp.txt";
     int pid, wpid;
     int status = 0;
     pid = fork();
     //CHANGE int config and directory 
     if (pid == 0) {
-        execl("../golum/makecsr.sh", "../golum/makecsr.sh", intconfi, username, privatekey, tempfile);
+        execl("./makecsr.sh", "./makecsr.sh", "../imopenssl.cnf", username, argv[2], tempfile);
     }
     while ((wpid = wait(&status)) > 0);
     FILE *temp; 
@@ -51,7 +56,7 @@ int main(int argc, char *argv) {
     long fsize1 = ftell(temp);
     fseek(temp, 0, SEEK_SET);
 
-    char *csr = malloc(fsize + 1);
+    char *csr = malloc(fsize1 + 1);
     fread(csr, 1, fsize1, temp);
     fclose(temp);
     remove("temp.txt");
@@ -61,10 +66,6 @@ int main(int argc, char *argv) {
 	const SSL_METHOD *meth;
 	BIO *sbio;
 	int err; char *s;
-
-	int ilen;
-	char ibuf[512];
-	char *obuf = "GET / HTTP/1.0\n\n";
 
 	struct sockaddr_in sin;
 	int sock;
@@ -88,9 +89,9 @@ int main(int argc, char *argv) {
 
 	bzero(&sin, sizeof sin);
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(443);
+	sin.sin_port = htons(4200);
 
-	he = gethostbyname("www.cs.columbia.edu");
+	he = gethostbyname("localhost");//update hostbyname
 	memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
 	if (connect(sock, (struct sockaddr *)&sin, sizeof sin) < 0) {
 		perror("connect");
@@ -122,6 +123,92 @@ sbio=BIO_new(BIO_s_socket());
 
     //ssl write stuff, new pass 
     //ssl read confirm new 
-    free(privatekey);
+    int bytes = (1024*1024);
+    int port = 4200;
+    char *method = "changepw";
+
+    char *buffer = (char *) malloc(sizeof(char)*bytes);
+
+    char header[BUF_SIZE];
+    sprintf(header, "post https://localhost:%d/%s HTTP/1.1\n", port, method);
+    char *header2 = "connection: close\n";
+    char header3[BUF_SIZE];
+
+    char usernameLine[sizeof(username)+strlen("username:\n")];
+    sprintf(usernameLine, "username:%s\n", username);
+
+    char passwordLine[sizeof(password)+strlen("password:\n")];
+    sprintf(passwordLine, "password:%s\n", password);
+
+    char newPasswordLine[sizeof(newPassword)+strlen("newpassword:\n")];
+    sprintf(newPasswordLine, "newpassword:%s\n", newPassword);
+    char csrLine[strlen(csr) + strlen("csr:\n")];
+    sprintf(csrLine, "csr:%s\n", csr);
+    bstring tempstring = bfromcstr(csrLine);
+    bstring bkey = bfromcstr("");
+    bstring bvalue = bfromcstr("");
+    serializeData(bkey, bvalue, tempstring, 1);
+    char *encodedCsrLine = bvalue->data;
+    bdestroy(tempstring);
+   //+1 for new line
+    int contentLength = strlen(usernameLine) + strlen(passwordLine) + strlen(newPasswordLine) + strlen(encodedCsrLine) + 1;
+    sprintf(header3, "content-length: %d\n", contentLength);
+    sprintf(buffer, "%s%s%s%s%s%s%s%s%s", header, header2, header3, "\n", usernameLine, passwordLine, newPasswordLine, encodedCsrLine, "\n");
+    SSL_write(ssl, buffer, strlen(buffer));
+    //read buff
+    //check for 200 okay
+    //if good, read the data (somehow)
+    //ask the user for the file they want stored
+    //write this data to the file from a buffer
+    //output "it is output here" 
+    
+    char ibuf[1000];
+    memset(ibuf, '\0', sizeof(ibuf));
+    char certif[bytes];
+    certif[0] = '\0';
+    int state = 0;
+    char writePath[100];
+    char *resultCertif = '\0';
+    while (1) {
+        int readReturn = SSL_read(ssl, ibuf, sizeof(ibuf)-1);
+        if (readReturn == 0) {
+            break;
+        }
+        if ((strstr(ibuf, "200 OK") != NULL) && (state == 0)) {
+            printf("Enter a path for cert: \n");
+            scanf("%s", writePath);
+            state = 1;
+        } else if ((strstr(ibuf, "400") != NULL) && (state == 0)) {
+            printf("Error 400: Bad Request");
+            break;
+        } else if ((state == 1) && (ibuf[0] == '\n')) {
+            state = 2;
+        } else if ((state == 2) && (ibuf[0] != '\n')) {
+            sprintf(certif + strlen(certif), ibuf);
+        } else if ((state == 2) && (ibuf[0] == '\n')) {
+            break;
+        }
+    }
+
+    if ((state == 2) && (certif != NULL)) {
+        bstring temp1 = bfromcstr(certif);
+        bstring bkey1 = bfromcstr("");
+        bstring bvalue1 = bfromcstr("");
+        deserializeData(bkey1, bvalue1, temp1, 1);
+        resultCertif = bvalue1->data;
+        FILE *fp;
+        fp = fopen(writePath, "w+");
+        fputs(resultCertif+12, fp);
+        fclose(fp);
+        bdestroy(temp1);
+        bdestroy(bkey1);
+        bdestroy(bvalue1);
+        printf("Wrote certification to: %s\n", writePath);
+    }
+    free(csr);
+    free(buffer);
+    free(sbio);
+    bdestroy(bkey);
+    bdestroy(bvalue);
     return 0;
 }

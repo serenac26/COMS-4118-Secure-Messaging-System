@@ -41,7 +41,13 @@ int sendmessage(bstring recipient, bstring msg) {
     bstring filename;
     FILE *fp;
     filename = bfromcstr("");
-    if (getMessageFilename(recipient, filename) != 1) {
+    int ret = getMessageFilename(recipient, filename);
+    if (ret != 1) {
+        if (ret == -2) {
+            fprintf(stderr, "Mailbox full\n");
+            bdestroy(filename);
+            return -2;
+        }
         fprintf(stderr, "Error getting filename\n");        
         bdestroy(filename);
         return -1;
@@ -135,22 +141,22 @@ int getOldestFilename(bstring recip, bstring filename) {
 // int main(int argc, char *argv[]) {
 //     char *op;
 //     if (argc < 2) {
-//         fprintf(stderr, "bad arg count; usage: boromailutils <operation>\nsupported operations: getrecipientcert sendmsg recvmsg");
+//         fprintf(stderr, "bad arg count; usage: boromailutils <operation>\nsupported operations: getusercert sendmsg recvmsg");
 //         return 1;
 //     }
 //     op = argv[1];
 
-//     if (strcmp(op, "getrecipientcert") == 0) {
+//     if (strcmp(op, "getuser") == 0) {
 //         char cert[MAX_CERT_SIZE];
 //         char *recipient;
 //         int i = 0;
 //         if (argc < 3) {
-//             fprintf(stderr, "bad arg count; usage: boromailutils getrecipientcert <recipient>\n");
+//             fprintf(stderr, "bad arg count; usage: boromailutils getusercert <recipient>\n");
 //             return 1;
 //         }
 //         recipient = argv[2];
 //         bstring brec = bfromcstr(recipient);
-//         int ret = getrecipientcert(cert, brec);
+//         int ret = getusercert(cert, brec);
 //         if (ret == 0) {
 //             printf("%s\n", cert);
 //         }
