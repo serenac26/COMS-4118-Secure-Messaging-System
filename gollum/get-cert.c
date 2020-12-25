@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
       break;
     } else if ((strstr(ibuf, "-3") != NULL) && (state == 0)) {
       printf("Error -3: Opening file or directory error");
-    } else if ((strstr(ibuf, "-5") != NULL) && (state == 0)) {
+    } else if ((strstr(ibuf, "201 OK") != NULL) && (state == 0)) {
       printf("Warning: Certificate exists already!");
       printf("Enter a path for cert: \n");
       scanf("%s", writePath);
