@@ -1,11 +1,18 @@
 # Tests 
 
 ## Run Tests
-`sudo rm -rf <tree> && make clean && make install TREE=<tree>`
+`sudo rm -rf <tree> && make clean && make install-test TREE=<tree>`
+
 In one shell:
-`sudo ../pemithor`
+```
+sudo su
+cd <tree>/server/bin
+./pemithor
+```
 In another shell:
 `sudo ./test.sh <tree>`
+
+Note that you can only run this test script once after installing a new directory. On subsequent runs, the server and CA will not be in the expected initial states anymore and tests will fail. You must start with a fresh directory tree before testing with `test.sh`.
 
 ## Functionality Tests
 

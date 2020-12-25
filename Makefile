@@ -5,6 +5,7 @@ B64DIR = ./base64
 BSTRDIR = ./bstrlib
 ONERING = ./oneringtorulethemail
 GOLLUM = ./gollum
+TESTTMP = ./test/tmp
 INCLUDES = -I$(BSTRDIR) -I$(B64DIR) -I./
 B64OBJS = base64.o
 BSTROBJS = bstrlib.o bstrlibext.o
@@ -12,7 +13,12 @@ DEFINES =
 LFLAGS = -L/usr/lib/ -L./bstrlib -L./base64 -lm -lssl -lcrypt -lcrypto
 CFLAGS = -O3 -Wall -pedantic -ansi -s $(DEFINES) -std=c99 -g -D_GNU_SOURCE
 
-install: install-unpriv server client gen-certs install-priv 
+install: install-test
+	rm -f $(TESTTMP)/creds.txt
+	sudo rm -f $(TREE)/server/bin/boromailutils $(TREE)/server/bin/faramailutils
+	sudo rm -f $(TREE)/client/bin/gollumutils
+
+install-test: install-unpriv server client gen-certs install-priv 
 
 install-unpriv:
 	./install-unpriv.sh $(TREE)
@@ -60,7 +66,6 @@ faramail: faramail.o utils.o faramailutils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o faramailutils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
 
-# Start testing
 boromailutils: boromailutils.o utils.o $(BSTROBJS) $(B64OBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) $(B64OBJS) -o $@ $(LFLAGS)
@@ -75,10 +80,6 @@ gollumutils: gollumutils.o utils.o $(BSTROBJS)
 	echo Linking: $@
 	$(CC) $< utils.o $(BSTROBJS) -o $@ $(LFLAGS)
 	sudo cp gollumutils $(TREE)/client/bin
-
-servercomponents: verifysign msgout
-	sudo mv $^ $(TREE)/server/bin
-# End testing
 	
 client: sendmsg recvmsg getcert changepw
 	sudo mv $^ $(TREE)/client/bin
@@ -118,5 +119,6 @@ clean:
 .PHONY : install
 .PHONY : install-unpriv
 .PHONY : install-priv
+.PHONY : install-test
 .PHONY : gen-certs
 .PHONY : clean

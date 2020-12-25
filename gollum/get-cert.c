@@ -88,15 +88,22 @@ int main(int argc, char *argv[]) {
   temp = fopen(tempfile, "r+");
   if (!temp) {
     fprintf(stderr, "File open error\n");
+    remove(tempfile);
     return 1;
   }
   fseek(temp, 0, SEEK_END);
   long fsize1 = ftell(temp);
   fseek(temp, 0, SEEK_SET);
 
-  char *csr = malloc(fsize1 + 1);
+  char *csr = (char *)malloc(fsize1 + 1);
   memset(csr, '\0', fsize1 + 1);
-  fread(csr, 1, fsize1, temp);
+  if (fsize1 != fread(csr, 1, fsize1, temp)) {
+    fprintf(stderr, "File open error\n");
+    fclose(temp);
+    remove(tempfile);
+    free(csr);
+    return 1;
+  }
   fclose(temp);
   remove(tempfile);
 
@@ -115,26 +122,7 @@ int main(int argc, char *argv[]) {
   SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
   SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
 
-  //   if (SSL_CTX_use_certificate_file(ctx, certfile, SSL_FILETYPE_PEM) != 1) {
-  //     ERR_print_errors_fp(stderr);
-  //     exit(EXIT_FAILURE);
-  //   }
-
-  //   // TODO: need to input password
-  //   if (SSL_CTX_use_PrivateKey_file(ctx, keyfile, SSL_FILETYPE_PEM) != 1) {
-  //     ERR_print_errors_fp(stderr);
-  //     exit(EXIT_FAILURE);
-  //   }
-
-  //   if (SSL_CTX_load_verify_locations(ctx, CA_CHAIN, NULL) != 1) {
-  //     ERR_print_errors_fp(stderr);
-  //     exit(EXIT_FAILURE);
-  //   }
-
   SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
-  /* Set the verification depth to 1 */
-
-  //   SSL_CTX_set_verify_depth(ctx, 1);
 
   int sock = create_socket(4200);
 
@@ -178,7 +166,7 @@ int main(int argc, char *argv[]) {
   bstring bkey = bfromcstr("csr");
   bstring bvalue = bfromcstr(csr);
   serializeData(bkey, bvalue, encoded, 1);
-  char *encodedCsrLine = encoded->data;
+  char *encodedCsrLine = (char *)encoded->data;
   bdestroy(bkey);
   bdestroy(bvalue);
 
@@ -238,7 +226,7 @@ int main(int argc, char *argv[]) {
     bstring bkey1 = bfromcstr("");
     bstring bvalue1 = bfromcstr("");
     deserializeData(bkey1, bvalue1, certif, 1);
-    resultCertif = bvalue1->data;
+    resultCertif = (char *)bvalue1->data;
     FILE *fp;
     fp = fopen(writePath, "w");
     if (!fp) {
