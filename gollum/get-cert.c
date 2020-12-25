@@ -45,7 +45,7 @@ int create_socket(int port) {
 //./get-cert <username> <privatekeyfile> <certout>
 int main(int argc, char *argv[]) {
   if (argc != 4 || !(validArg(argv[1]) && validArg(argv[2]) && validArg(argv[3]))) {
-    fprintf(stderr, "bad arg count; usage: get-cert <username> <key-file> <cert-out-file>\n");
+    fprintf(stderr, "bad arguments; usage: get-cert <username> <key-file> <cert-out-file>\n");
   }
   char *username = argv[1];
   char *privatekeyfile = argv[2];

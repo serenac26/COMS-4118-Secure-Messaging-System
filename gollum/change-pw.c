@@ -47,7 +47,7 @@ int create_socket(int port) {
 //./change-pw <username> <privatekeyfile> <certout>
 int main(int argc, char *argv[]) {
   if (argc != 4 || !(validArg(argv[1]) && validArg(argv[2]) && validArg(argv[2]))) {
-    fprintf(stderr, "bad arg count; usage: change-pw <username> <key-file> <cert-out-file>\n");
+    fprintf(stderr, "bad arguments; usage: change-pw <username> <key-file> <cert-out-file>\n");
     return 1;
   }
   char *username = argv[1];
