@@ -76,6 +76,8 @@ int parseVerbLine(char *data, struct VerbLine *vl) {
   regmatch_t match[6];
   int test = regexec(&reg, data, 6, match, 0);
 
+  regfree(&reg);
+
   if (test == REG_NOMATCH)
     return 1;
   else if (match[1].rm_eo - match[1].rm_so >= sizeof(vl->verb))
@@ -111,8 +113,7 @@ int parseVerbLine(char *data, struct VerbLine *vl) {
     int j = i + match[5].rm_so;
     vl->version[i] = data[j];
   }
-
-  regfree(&reg);
+  
   return 0;
 }
 
@@ -139,6 +140,8 @@ int parseOptionLine(char *data, struct OptionLine *ol) {
   regmatch_t match[3];
   int test = regexec(&reg, data, 3, match, 0);
 
+  regfree(&reg);
+
   if (test == REG_NOMATCH)
     return 1;
   else if (match[1].rm_eo - match[1].rm_so >= sizeof(ol->header))
@@ -159,7 +162,6 @@ int parseOptionLine(char *data, struct OptionLine *ol) {
     ol->value[i] = data[j];
   }
 
-  regfree(&reg);
   return 0;
 }
 
@@ -184,6 +186,8 @@ int parseSubject(char *data, bstring result) {
   regmatch_t match[2];
   int test = regexec(&reg, data, 2, match, 0);
 
+  regfree(&reg);
+
   if (test == REG_NOMATCH) return 1;
 
   bstring bdata = bfromcstr(data);
@@ -193,7 +197,6 @@ int parseSubject(char *data, bstring result) {
   bassign(result, _result);
   bdestroy(_result);
 
-  regfree(&reg);
   return 0;
 }
 
@@ -737,6 +740,7 @@ int main(int mama, char **moo) {
     SSL_shutdown(ssl);
     SSL_free(ssl);
     close(client);
+    if (DEBUG && strcmp(vl.version, "die") == 0) break;
   }
 
   close(sock);
