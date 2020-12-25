@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
     long fsize1 = ftell(temp);
     fseek(temp, 0, SEEK_SET);
 
-    char *csr = malloc(fsize + 1);
+    char *csr = malloc(fsize1 + 1);
     fread(csr, 1, fsize1, temp);
     fclose(temp);
     remove("temp.txt");
@@ -158,6 +158,45 @@ sbio=BIO_new(BIO_s_socket());
     //ask the user for the file they want stored
     //write this data to the file from a buffer
     //output "it is output here" 
+    
+    char ibuf[1000];
+    memset(ibuf, '\0', sizeof(ibuf));
+    char certif[1000];
+    certif[0] = '\0';
+    int state = 0;
+    char writePath[100];
+    char *resultCertif;
+    while (1) {
+        int readReturn = SSL_read(ssl, ibuf, sizeof(ibuf)-1);
+        if (readReturn == 0) {
+            break;
+        }
+        if ((strstr(ibuf, "200 OK") != NULL) && (state == 0)) {
+            printf("Enter a path for cert: \n");
+            scanf("%s", writePath);
+            state = 1;
+        } else if ((strstr(ibuf, "400") != NULL) && (state == 0)) {
+            printf("Error 400: Problem with username, password or key.");
+            break;
+        } else if ((state == 1) && (ibuf[0] == "\n")) {
+            state = 2;
+        } else if ((state == 2) && (ibuf[0] != "\n")) {
+            sprintf(certif + strlen(certif), ibuf);
+        } else if ((state == 2) && (ibuf[0] == "\n")) {
+            break;
+        }
+    }
+
+    if ((state == 2) && (certif != NULL)) {
+        bstring temp = bfromcstr(certif);
+        decodeMessage(temp);
+        resultCertif = temp->data;
+        FILE *fp;
+        fp = fopen(writePath, "w+");
+        fputs(resultCertif+12, fp);
+        fclose(fp);
+        printf("Wrote certification to: %s\n", writePath);
+    }
     free(privatekey);
     free(csr);
     return 0;
