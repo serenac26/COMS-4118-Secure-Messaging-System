@@ -21,7 +21,7 @@ certA=$tmp/$A$certsuffix
 certB=$tmp/$B$certsuffix
 certC=$tmp/$C$certsuffix
 
-keypass=keypass
+keypass=pass
 passA=pass
 passB=pass
 passC=pass
@@ -32,17 +32,19 @@ keypassprompt="Enter PEM pass phrase:"
 certprompt="Enter certificate file path:"
 msgoutprompt="Enter message output file path:"
 
-cd ..
-sudo rm -rf $1 && make clean && make install TREE=$1
-msg1="MAIL FROM:<$A>
-MAIL TO:<$B>
-Hello $B!
-Love,
-$A
-"
-cd $1/client/bin
+cd ../$1/client/bin
+
+rm -f $tmp/msg*.txt
+rm -f $tmp/$A* $tmp/$B* $tmp/$C*
 
 # Functionality tests
+
+msg1="MAIL FROM:<$A>\n
+MAIL TO:<$B>\n
+Hello $B!\n
+Love,\n
+$A
+"
 
 testfunctionality1 () {
     echo "Test Functionality 1: basic end to end without changepw"
@@ -51,50 +53,52 @@ testfunctionality1 () {
     echo $msg1 > $tmp/$msg
 
     echo "$A and $B generate private keys and certificates"
-    -u $A ./genkey $keyA $keypass
-    -u $A ./getcert $A $keyA
-    expect $pwprompt
-    send -- "$pass\r"
-    expect $certprompt
-    send -- "$certA\n"
+    ./genkey.sh $keyA $keypass
+    echo "pw=$pass"
+    echo "cert=$certA"
+    ./getcert $A $keyA
+    # expect $pwprompt
+    # send -- "$pass\r"
+    # expect $certprompt
+    # send -- "$certA\n"
 
-    -u $B ./genkey $keyB $keypass
-    -u $B ./getcert $B $keyB
-    expect $pwprompt
-    send -- "$pass\r"
-    expect $certprompt
-    send -- "$certB\n"
+    ./genkey.sh $keyB $keypass
+    ./getcert $B $keyB
+    # expect $pwprompt
+    # send -- "$pass\r"
+    # expect $certprompt
+    # send -- "$certB\n"
 
     echo "___________________________________________________________________________"
 
     echo "$A sends message to $B"
-    -u $A ./sendmsg $certA $keyA $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ ! test -f "$mail/$B/00001" ]; then
+    ./sendmsg $certA $keyA $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
 
     echo "$B receives message from $A"
-    -u $B ./recvmsg $certB $keyB
-    expect $keypassprompt
-    send -- "$keypass\r"
-    expect $msgoutprompt
-    send -- "$tmp/$msgout\n"
-    if [ ! test -f "$tmp/$msgout" ]; then
+    ./recvmsg $certB $keyB
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    # expect $msgoutprompt
+    # send -- "$tmp/$msgout\n"
+    if [ ! -f "$tmp/$msgout" ]; then
         echo "Error: received message not written to path"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
-    if [ test -f "$mail/$B/00001" ]; then
+    if [ -f "$mail/$B/00001" ]; then
         echo "Error: message not deleted from $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     if [ $(diff $tmp/$msg $tmp/$msgout) != "" ]; then
         echo "Error: received message does not match sent message"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     rm -f $msg $msgout
@@ -109,81 +113,81 @@ testfunctionality2 () {
     echo $msg1 > $tmp/$msg
 
     echo "$A generates new private key and changes password to get a new certificate"
-    -u $A ./genkey new$keyA $keypass
-    -u $A ./changepw $A new$keyA
-    expect $pwprompt
-    send -- "$pass\r"
-    expect $newpwprompt
-    send -- "new$pass\r"
-    expect $certprompt
-    send -- "new$certA\n"
+    ./genkey.sh new$keyA $keypass
+    ./changepw $A new$keyA
+    # expect $pwprompt
+    # send -- "$pass\r"
+    # expect $newpwprompt
+    # send -- "new$pass\r"
+    # expect $certprompt
+    # send -- "new$certA\n"
 
     echo "___________________________________________________________________________"
 
-    echo "$A tries to login with old pw; expect login failure"
-    -u $A ./getcert $A $keyA
-    expect $pwprompt
-    send -- "$pass\r"
+    echo "$A tries to login with old pw; # expect login failure"
+    ./getcert $A $keyA
+    # expect $pwprompt
+    # send -- "$pass\r"
 
     echo "___________________________________________________________________________"
 
-    echo "$A tries to login with new pw; expect success with certificate already exists message"
-    -u $A ./getcert $A $keyA
-    expect $pwprompt
-    send -- "new$pass\r"
+    echo "$A tries to login with new pw; # expect success with certificate already exists message"
+    ./getcert $A $keyA
+    # expect $pwprompt
+    # send -- "new$pass\r"
 
     echo "___________________________________________________________________________"
 
-    echo "$A sends message to $B with old certificate and old key; expect message to be sent"
-    -u $A ./sendmsg $certA $keyA $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ ! test -f "$mail/$B/00001" ]; then
+    echo "$A sends message to $B with old certificate and old key; # expect message to be sent"
+    ./sendmsg $certA $keyA $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
 
-    echo "$B tries to receive message from $A; expect client signature verification to fail"
-    -u $B ./recvmsg $certB $keyB
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ test -f "$mail/$B/00001" ]; then
+    echo "$B tries to receive message from $A; # expect client signature verification to fail"
+    ./recvmsg $certB $keyB
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ -f "$mail/$B/00001" ]; then
         echo "Error: message not deleted from $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
 
-    echo "$A sends message to $B with new certificate and new key; expect message to be sent"
-    -u $A ./sendmsg new$certA new$keyA $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ ! test -f "$mail/$B/00001" ]; then
+    echo "$A sends message to $B with new certificate and new key; # expect message to be sent"
+    ./sendmsg new$certA new$keyA $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
 
-    echo "$B receives message from $A; expect success"
-    -u $B ./recvmsg $certB $keyB
-    expect $keypassprompt
-    send -- "$keypass\r"
-    expect $msgoutprompt
-    send -- "$tmp/$msgout\r"
-    if [ ! test -f "$tmp/$msgout" ]; then
+    echo "$B receives message from $A; # expect success"
+    ./recvmsg $certB $keyB
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    # expect $msgoutprompt
+    # send -- "$tmp/$msgout\r"
+    if [ ! -f "$tmp/$msgout" ]; then
         echo "Error: received message not written to path"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
-    if [ test -f "$mail/$B/00001" ]; then
+    if [ -f "$mail/$B/00001" ]; then
         echo "Error: message not deleted from $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     if [ $(diff $tmp/$msg $tmp/$msgout) != "" ]; then
         echo "Error: received message does not match sent message"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     
     rm -f $msg $msgout
@@ -198,52 +202,52 @@ testfunctionality3 () {
     echo $msg1 > $tmp/$msg
 
     echo "$A generates new private key"
-    -u $A ./genkey newnew$keyA $keypass
+    ./genkey.sh newnew$keyA $keypass
     
     echo "___________________________________________________________________________"
 
-    echo "$A getcert with new private key; expect login success with certificate already exists message"
-    -u $A ./getcert $A newnew$keyA
-    expect $pwprompt
-    send -- "new$pass\r"
-    expect $certprompt
-    send -- "newnew$certA\r"
+    echo "$A getcert with new private key; # expect login success with certificate already exists message"
+    ./getcert $A newnew$keyA
+    # expect $pwprompt
+    # send -- "new$pass\r"
+    # expect $certprompt
+    # send -- "newnew$certA\r"
     if [ $(diff new$certA newnew$certA) != "" ]; then
         echo "Error: getcert generated a new certificate"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
     
     echo "check that $A's certificate has not changed in the CA"
     echo "$A sends message to $B"
-    -u $A ./sendmsg new$certA new$keyA $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ ! test -f "$mail/$B/00001" ]; then
+    ./sendmsg new$certA new$keyA $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     
     echo "___________________________________________________________________________"
 
-    echo "$B receives message from $A; expect success"
-    -u $B ./recvmsg $certB $keyB
-    expect $keypassprompt
-    send -- "$keypass\r"
-    expect $msgoutprompt
-    send -- "$tmp/$msgout\r"
-    if [ ! test -f "$tmp/$msgout" ]; then
+    echo "$B receives message from $A; # expect success"
+    ./recvmsg $certB $keyB
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    # expect $msgoutprompt
+    # send -- "$tmp/$msgout\r"
+    if [ ! -f "$tmp/$msgout" ]; then
         echo "Error: received message not written to path"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
-    if [ test -f "$mail/$B/00001" ]; then
+    if [ -f "$mail/$B/00001" ]; then
         echo "Error: message not deleted from $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     if [ $(diff $tmp/$msg $tmp/$msgout) != "" ]; then
         echo "Error: received message does not match sent message"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     
     rm -f $msg $msgout
@@ -258,20 +262,20 @@ testfunctionality4 () {
     echo $msg1 > $tmp/$msg
 
     echo "$A sends message to $B"
-    -u $A ./sendmsg new$certA new$keyA $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ ! test -f "$mail/$B/00001" ]; then
+    ./sendmsg new$certA new$keyA $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
-    echo "$B tries to change password; expect pending messages failure"
-    -u $B ./changepw $B $keyB
-    expect $pwprompt
-    send -- "$pass\r"
-    expect $newpwprompt
-    send -- "new$pass\r"
+    echo "$B tries to change password; # expect pending messages failure"
+    ./changepw $B $keyB
+    # expect $pwprompt
+    # send -- "$pass\r"
+    # expect $newpwprompt
+    # send -- "new$pass\r"
 
     rm -f $msg $msgout
     
@@ -283,24 +287,24 @@ testfunctionality5 () {
     
     # revert pw to original and overwrite original key and cert 
     echo "$A generates new private key and changes password to get a new certificate"
-    -u $A ./genkey $keyA $keypass
-    -u $A ./changepw $A $keyA
-    expect $pwprompt
-    send -- "new$pass\r"
-    expect $newpwprompt
-    send -- "$pass\r"
-    expect $certprompt
-    send -- "$certA\n"
+    ./genkey.sh $keyA $keypass
+    ./changepw $A $keyA
+    # expect $pwprompt
+    # send -- "new$pass\r"
+    # expect $newpwprompt
+    # send -- "$pass\r"
+    # expect $certprompt
+    # send -- "$certA\n"
 
     echo "___________________________________________________________________________"
 
-    echo "$B tries to receive message from $A; expect client signature verification to fail"
-    -u $B ./recvmsg $certB $keyB
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ test -f "$mail/$B/00001" ]; then
+    echo "$B tries to receive message from $A; # expect client signature verification to fail"
+    ./recvmsg $certB $keyB
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ -f "$mail/$B/00001" ]; then
         echo "Error: message not deleted from $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
         
     rm -f $msg $msgout
@@ -308,11 +312,12 @@ testfunctionality5 () {
     return 0
 }
 
-badmsg1="MAIL FROM:<$A>
-MAIL TO:<bad$B> <$B>
-Hello $B!
-Love,
-$A
+badmsg1="MAIL FROM:<$A>\n
+MAIL TO:<bad$B>\n
+MAIL TO:<$B>\n
+Hello $B!\n
+Love,\n
+$A\n
 "
 
 testfunctionality6 () {
@@ -321,13 +326,13 @@ testfunctionality6 () {
     msgout=msg6out.txt
     echo $badmsg1 > $tmp/$msg
 
-    echo "$A sends message to invalid recipient and $B; expect one invalid recipient error and one success"
-    -u $A ./sendmsg $certA $keyA $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ ! test -f "$mail/$B/00001" ]; then
+    echo "$A sends message to invalid recipient and $B; # expect one invalid recipient error and one success"
+    ./sendmsg $certA $keyA $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ ! -f "$mail/$B/00001" ]; then
         echo "Error: message not written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     rm -f $msg $msgout
@@ -335,10 +340,10 @@ testfunctionality6 () {
     return 0
 }
 
-badmsg2="MAIL FROM:<$A>
-MAIL TO:<$C>
-Hello $C!
-Love,
+badmsg2="MAIL FROM:<$A>\n
+MAIL TO:<$C>\n
+Hello $C!\n
+Love,\n
 $A
 "
 
@@ -348,13 +353,13 @@ testfunctionality7 () {
     msgout=msg7out.txt
     echo $badmsg2 > $tmp/$msg
 
-    echo "$A sends message to uncertified recipient; expect certificate read error"
-    -u $A ./sendmsg $certA $keyA $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ test -f "$mail/$C/00001" ]; then
+    echo "$A sends message to uncertified recipient; # expect certificate read error"
+    ./sendmsg $certA $keyA $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ -f "$mail/$C/00001" ]; then
         echo "Error: message written to uncertified $C's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     rm -f $msg $msgout
@@ -425,10 +430,10 @@ testfunctionality () {
 
 # User Impersonation tests
 
-badmsg3="MAIL FROM:<$B>
-MAIL TO:<$C>
-Hello $C!
-Love,
+badmsg3="MAIL FROM:<$B>\n
+MAIL TO:<$C>\n
+Hello $C!\n
+Love,\n
 $A
 "
 
@@ -439,33 +444,33 @@ testimpersonation () {
     echo $badmsg3 > $tmp/$msg
 
     echo "$C generates a private key and gets a certificate"
-    -u $C ./genkey $keyC $keypass
-    -u $C ./getcert $C $keyC
-    expect $pwprompt
-    send -- "$pass\r"
-    expect $certprompt
-    send -- "$certC\n"
+    ./genkey.sh $keyC $keypass
+    ./getcert $C $keyC
+    # expect $pwprompt
+    # send -- "$pass\r"
+    # expect $certprompt
+    # send -- "$certC\n"
 
     echo "___________________________________________________________________________"
 
     echo "$A tries to send message to $C by impersonating $B"
-    -u $A ./sendmsg $certA $keyA $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ ! test -f "$mail/$C/00001" ]; then
+    ./sendmsg $certA $keyA $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ ! -f "$mail/$C/00001" ]; then
         echo "Error: message not written to $C's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     echo "___________________________________________________________________________"
 
-    echo "$C tries to receive message sent by $A posing as $B; expect client signature verification to fail"
-    -u $C ./recvmsg $certC $keyC
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ test -f "$mail/$C/00001" ]; then
+    echo "$C tries to receive message sent by $A posing as $B; # expect client signature verification to fail"
+    ./recvmsg $certC $keyC
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ -f "$mail/$C/00001" ]; then
         echo "Error: message not deleted from $C's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
         
     rm -f $msg $msgout
@@ -493,13 +498,13 @@ testTLS1 () {
     msg=msg9.txt
     msgout=msg9out.txt
     echo $msg1 > $tmp/$msg
-    echo "$A tries to send message with mismatched certificate/key pair; expect client certificate verification to fail"
-    -u $A ./sendmsg $badcert $mismatchkey $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ test -f "$mail/$B/00001" ]; then
+    echo "$A tries to send message with mismatched certificate/key pair; # expect client certificate verification to fail"
+    ./sendmsg $badcert $mismatchkey $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ -f "$mail/$B/00001" ]; then
         echo "Error: message written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     
     rm -f $msg $msgout
@@ -512,13 +517,13 @@ testTLS2 () {
     msg=msg10.txt
     msgout=msg10out.txt
     echo $msg1 > $tmp/$msg
-    echo "$A tries to send message with certificate signed by another CA; expect client certificate verification to fail"
-    -u $A ./sendmsg $badcert $badkey $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ test -f "$mail/$B/00001" ]; then
+    echo "$A tries to send message with certificate signed by another CA; # expect client certificate verification to fail"
+    ./sendmsg $badcert $badkey $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ -f "$mail/$B/00001" ]; then
         echo "Error: message written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     
     rm -f $msg $msgout
@@ -531,13 +536,13 @@ testTLS3 () {
     msg=msg11.txt
     msgout=msg11out.txt
     echo $msg1 > $tmp/$msg
-    echo "$A tries to send message with invalid certificate; expect client certificate verification to fail"
-    -u $A ./sendmsg $invalidcert $badkey $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ test -f "$mail/$B/00001" ]; then
+    echo "$A tries to send message with invalid certificate; # expect client certificate verification to fail"
+    ./sendmsg $invalidcert $badkey $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ -f "$mail/$B/00001" ]; then
         echo "Error: message written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     
     rm -f $msg $msgout
@@ -550,13 +555,13 @@ testTLS4 () {
     msg=msg12.txt
     msgout=msg12out.txt
     echo $msg1 > $tmp/$msg
-    echo "$A tries to send message with invalid key; expect client certificate verification to fail"
-    -u $A ./sendmsg $badcert $invalidkey $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ test -f "$mail/$B/00001" ]; then
+    echo "$A tries to send message with invalid key; # expect client certificate verification to fail"
+    ./sendmsg $badcert $invalidkey $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ -f "$mail/$B/00001" ]; then
         echo "Error: message written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     
     rm -f $msg $msgout
@@ -580,13 +585,13 @@ testlargemsg () {
 
     echo "___________________________________________________________________________"
 
-    echo "$A tries to send large message to $B; expect message too large error"
-    -u $A ./sendmsg $certA $keyA $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ test -f "$mail/$B/00001" ]; then
+    echo "$A tries to send large message to $B; # expect message too large error"
+    ./sendmsg $certA $keyA $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ -f "$mail/$B/00001" ]; then
         echo "Error: message written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     rm -f $msg $msgout
@@ -594,8 +599,8 @@ testlargemsg () {
     return 0
 }
 
-$smolmsg="MAIL FROM:<$A>
-MAIL TO:<$B>
+smolmsg="MAIL FROM:<$A>\n
+MAIL TO:<$B>\n
 "
 
 testspamsendmsg () {
@@ -606,24 +611,24 @@ testspamsendmsg () {
 
     echo "Fill up $B's mailbox with 99999 messages"
     for i in 1..99999; do
-        -u $A ./sendmsg $certA $keyA $tmp/$msg
-        expect $keypassprompt
-        send -- "$keypass\r"
+        ./sendmsg $certA $keyA $tmp/$msg
+        # expect $keypassprompt
+        # send -- "$keypass\r"
     done
-    if [ ! test -f "$mail/$B/99999" ]; then
+    if [ ! -f "$mail/$B/99999" ]; then
         echo "Error: messages not written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     
     echo "___________________________________________________________________________"
 
     echo "Try to send 100000th message to $B"    
-    -u $A ./sendmsg $certA $keyA $tmp/$msg
-    expect $keypassprompt
-    send -- "$keypass\r"
-    if [ test -f "$mail/$B/00000" ]; then
+    ./sendmsg $certA $keyA $tmp/$msg
+    # expect $keypassprompt
+    # send -- "$keypass\r"
+    if [ -f "$mail/$B/00000" ]; then
         echo "Error: message written to $B's mailbox"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
 
     rm -f $msg $msgout
@@ -639,56 +644,56 @@ testsecurity () {
     testimpersonation
     if [ $? -ne 0 ]; then
         echo "Test Impersonation FAILED"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testTLS1
     if [ $? -ne 0 ]; then
         echo "Test TLS 1 FAILED"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testTLS2
     if [ $? -ne 0 ]; then
         echo "Test TLS 2 FAILED"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testTLS3
     if [ $? -ne 0 ]; then
         echo "Test TLS 3 FAILED"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testTLS4
     if [ $? -ne 0 ]; then
         echo "Test TLS 4 FAILED"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testlargemsg
     if [ $? -ne 0 ]; then
         echo "Test Large Message FAILED"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testspamsendmsg
     if [ $? -ne 0 ]; then
         echo "Test Spam sendmsg FAILED"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
     testspamchangepw
     if [ $? -ne 0 ]; then
         echo "Test Spam changepw FAILED"
-        return 1
+        rm -f $msg $msgout; return 1
     fi
     echo "___________________________________________________________________________"
     echo "___________________________________________________________________________"
@@ -703,3 +708,6 @@ testsecurity () {
 
 testfunctionality
 testsecurity
+
+rm -f $tmp/msg*.txt
+rm -f $tmp/$A* $tmp/$B* $tmp/$C*

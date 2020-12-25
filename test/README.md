@@ -1,5 +1,12 @@
 # Tests 
 
+## Run Tests
+`sudo rm -rf <tree> && make clean && make install TREE=<tree>`
+In one shell:
+`sudo ../pemithor`
+In another shell:
+`./test.sh`
+
 ## Functionality Tests
 
 Test Case 1:
