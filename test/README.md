@@ -2,6 +2,7 @@
 
 ## Run Tests
 `sudo rm -rf <tree> && make clean && make install TREE=<tree>`
+
 In one shell:
 ```
 sudo su
