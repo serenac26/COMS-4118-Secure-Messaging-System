@@ -154,3 +154,5 @@ openssl verify -CAfile $cachain $fservercert
 
 cd $pwd
 rm $1/server/rootopenssl.cnf
+cp $1/server/ca/certs/ca.cert.pem $1/client/ca.cert.pem
+cp $1/server/ca/intermediate/certs/intermediate.cert.pem $1/client/intermediate.cert.pem
