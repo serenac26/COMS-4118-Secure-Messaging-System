@@ -361,7 +361,7 @@ testfunctionality4 () {
     echo "$oldpwprompt $Bp"
     echo "$newpwprompt newpass"
     echo "$keypassprompt pass"
-    echo "$passphraseprompt ../../../test/tmp/addleness.key.pem: pass"
+    echo "$passphraseprompt ../../../test/tmp/muermo.key.pem: pass"
     echo "=================================="   
     ./changepw $B $keyB $tmp/blah
     # expect $pwprompt
