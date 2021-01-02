@@ -33,6 +33,7 @@ passB=pass
 passC=pass
 
 pwprompt="Enter password:"
+oldpwprompt="Enter old password:"
 newpwprompt="Enter new password:"
 keypassprompt="Enter PEM pass phrase:"
 passphraseprompt="Enter pass phrase for"
@@ -51,23 +52,39 @@ testfunctionality1 () {
     msgout=msg1out.txt
 
     echo "$A and $B generate private keys and certificates"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$pwprompt $Ap"
+    echo "$keypassprompt pass"
+    echo "$passphraseprompt ../../../test/tmp/addleness.key.pem: pass"
+    echo "=================================="
     ./genkey.sh $keyA $keypass
-    echo "use login password from tmp/creds.txt"
-    echo "use key password: pass"
     ./getcert $A $keyA $certA
     # expect $pwprompt
     # send -- "$pass\r"
 
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$pwprompt $Bp"
+    echo "$keypassprompt pass"
+    echo "$passphraseprompt ../../../test/tmp/muermo.key.pem: pass"
+    echo "=================================="
     ./genkey.sh $keyB $keypass
     ./getcert $B $keyB $certB
-    echo "use login password from tmp/creds.txt"
-    echo "use key password: pass"
     # expect $pwprompt
     # send -- "$pass\r"
 
     echo "___________________________________________________________________________"
 
     echo "$A sends message to $B"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="
     ./sendmsg $certA $keyA $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -79,7 +96,13 @@ testfunctionality1 () {
     echo "___________________________________________________________________________"
 
     echo "$B receives message from $A"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="
     ./recvmsg $certB $keyB $tmp/$msgout
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -109,9 +132,14 @@ testfunctionality2 () {
 
     echo "$A generates new private key and changes password to get a new certificate"
     ./genkey.sh $keyA.new $keypass
-    echo "use login password from tmp/creds.txt"
-    echo "use new login password: newpass"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$oldpwprompt $Ap"
+    echo "$newpwprompt newpass"
+    echo "$keypassprompt pass"
+    echo "$passphraseprompt ../../../test/tmp/addleness.key.pem.new: pass"
+    echo "=================================="
     ./changepw $A $keyA.new $certA.new
     # expect $pwprompt
     # send -- "$pass\r"
@@ -121,8 +149,13 @@ testfunctionality2 () {
     echo "___________________________________________________________________________"
 
     echo "$A tries to login with old pw; # expect login failure"
-    echo "try old login password from tmp/creds.txt"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$pwprompt $Ap"
+    echo "$keypassprompt pass"
+    echo "$passphraseprompt ../../../test/tmp/addleness.key.pem: pass"
+    echo "=================================="
     ./getcert $A $keyA $tmp/blah
     # expect $pwprompt
     # send -- "$pass\r"
@@ -130,8 +163,13 @@ testfunctionality2 () {
     echo "___________________________________________________________________________"
 
     echo "$A tries to login with new pw; # expect success with certificate already exists message"
-    echo "use new login password: newpass"
-    echo "use key password: pass"    
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$pwprompt newpass"
+    echo "$keypassprompt pass"
+    echo "$passphraseprompt ../../../test/tmp/addleness.key.pem: pass"
+    echo "=================================="    
     ./getcert $A $keyA $tmp/blah
     # expect $pwprompt
     # send -- "new$pass\r"
@@ -139,7 +177,12 @@ testfunctionality2 () {
     echo "___________________________________________________________________________"
 
     echo "$A sends message to $B with old certificate and old key; # expect message to be sent"
-    echo "use key password: pass"    
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="
     ./sendmsg $certA $keyA $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -151,7 +194,12 @@ testfunctionality2 () {
     echo "___________________________________________________________________________"
 
     echo "$B tries to receive message from $A; # expect client signature verification to fail"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="   
     ./recvmsg $certB $keyB $tmp/blah
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -163,7 +211,12 @@ testfunctionality2 () {
     echo "___________________________________________________________________________"
 
     echo "$A sends message to $B with new certificate and new key; # expect message to be sent"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="   
     ./sendmsg $certA.new $keyA.new $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -175,7 +228,13 @@ testfunctionality2 () {
     echo "___________________________________________________________________________"
 
     echo "$B receives message from $A; # expect success"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="   
     ./recvmsg $certB $keyB $tmp/$msgout
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -209,8 +268,13 @@ testfunctionality3 () {
     echo "___________________________________________________________________________"
 
     echo "$A getcert with new private key; # expect login success with certificate already exists message"
-    echo "use login password: newpass"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$pwprompt newpass"
+    echo "$keypassprompt pass"
+    echo "$passphraseprompt ../../../test/tmp/addleness.key.pem.newnew: pass"
+    echo "=================================="
     ./getcert $A $keyA.newnew $certA.newnew
     # expect $pwprompt
     # send -- "new$pass\r"
@@ -224,7 +288,12 @@ testfunctionality3 () {
     
     echo "check that $A's certificate has not changed in the CA"
     echo "$A sends message to $B"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="   
     ./sendmsg $certA.new $keyA.new $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -236,7 +305,13 @@ testfunctionality3 () {
     echo "___________________________________________________________________________"
 
     echo "$B receives message from $A; # expect success"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="   
     ./recvmsg $certB $keyB $tmp/$msgout
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -265,7 +340,12 @@ testfunctionality4 () {
     msgout=msg4out.txt
 
     echo "$A sends message to $B"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="   
     ./sendmsg $certA.new $keyA.new $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -275,9 +355,14 @@ testfunctionality4 () {
     fi
 
     echo "$B tries to change password; # expect pending messages failure"
-    echo "use old login password from tmp/creds.txt"
-    echo "use new login password: newpass"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$oldpwprompt $Bp"
+    echo "$newpwprompt newpass"
+    echo "$keypassprompt pass"
+    echo "$passphraseprompt ../../../test/tmp/muermo.key.pem: pass"
+    echo "=================================="   
     ./changepw $B $keyB $tmp/blah
     # expect $pwprompt
     # send -- "$pass\r"
@@ -295,9 +380,14 @@ testfunctionality5 () {
     # revert pw to original and overwrite original key and cert 
     echo "$A generates new private key and changes password to get a new certificate"
     ./genkey.sh $keyA $keypass
-    echo "use old login password: newpass"
-    echo "use new login password: pass"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$oldpwprompt newpass"
+    echo "$newpwprompt $Bp"
+    echo "$keypassprompt pass"
+    echo "$passphraseprompt ../../../test/tmp/addleness.key.pem: pass"
+    echo "=================================="
     ./changepw $A $keyA $certA
     # expect $pwprompt
     # send -- "new$pass\r"
@@ -307,7 +397,12 @@ testfunctionality5 () {
     echo "___________________________________________________________________________"
 
     echo "$B tries to receive message from $A; # expect client signature verification to fail"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="
     ./recvmsg $certB $keyB $tmp/blah
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -327,7 +422,12 @@ testfunctionality6 () {
     msgout=msg6out.txt
 
     echo "$A sends message to invalid recipient and $B; # expect one invalid recipient error and one success"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="
     ./sendmsg $certA $keyA $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -347,7 +447,11 @@ testfunctionality7 () {
     msgout=msg7out.txt
 
     echo "$A sends message to uncertified recipient; # expect certificate read error"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "=================================="
     ./sendmsg $certA $keyA $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -431,8 +535,13 @@ testimpersonation () {
 
     echo "$C generates a private key and gets a certificate"
     ./genkey.sh $keyC $keypass
-    echo "use login password from tmp/creds.txt"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$pwprompt $Cp"
+    echo "$keypassprompt pass"
+    echo "$passphraseprompt ../../../test/tmp/forfend.key.pem: pass"
+    echo "=================================="
     ./getcert $C $keyC $certC
     # expect $pwprompt
     # send -- "$pass\r"
@@ -440,6 +549,12 @@ testimpersonation () {
     echo "___________________________________________________________________________"
 
     echo "$A tries to send message to $C by impersonating $B"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="
     echo "use key password: pass"
     ./sendmsg $certA $keyA $tmp/$msg
     # expect $keypassprompt
@@ -452,7 +567,12 @@ testimpersonation () {
     echo "___________________________________________________________________________"
 
     echo "$C tries to receive message sent by $A posing as $B; # expect client signature verification to fail"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "$keypassprompt pass"
+    echo "=================================="
     ./recvmsg $certC $keyC $tmp/blah
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -486,7 +606,11 @@ testTLS1 () {
     msg=msg9.txt
     msgout=msg9out.txt
     echo "$A tries to send message with mismatched certificate/key pair; # expect client certificate verification to fail"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "=================================="
     ./sendmsg $badcert $mismatchkey $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -505,7 +629,11 @@ testTLS2 () {
     msg=msg10.txt
     msgout=msg10out.txt
     echo "$A tries to send message with certificate signed by another CA; # expect client certificate verification to fail"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "=================================="
     ./sendmsg $badcert $badkey $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -524,7 +652,6 @@ testTLS3 () {
     msg=msg11.txt
     msgout=msg11out.txt
     echo "$A tries to send message with invalid certificate; # expect client certificate verification to fail"
-    echo "use key password: pass"
     ./sendmsg $invalidcert $badkey $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -543,7 +670,6 @@ testTLS4 () {
     msg=msg12.txt
     msgout=msg12out.txt
     echo "$A tries to send message with invalid key; # expect client certificate verification to fail"
-    echo "use key password: pass"
     ./sendmsg $badcert $invalidkey $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
@@ -564,7 +690,7 @@ testlargemsg () {
     msg=msg13.txt
     msgout=msg13out.txt
 
-    echo "write large message"
+    echo "write large message (this will take a few seconds)"
     echo "MAIL FROM:<$A>" >> $tmp/$msg
     echo "RCPT TO:<$B>" >> $tmp/$msg
     for i in {1..1000000}; do
@@ -574,7 +700,11 @@ testlargemsg () {
     echo "___________________________________________________________________________"
 
     echo "$A tries to send large message to $B; # expect message too large error"
-    echo "use key password: pass"
+    echo ""
+    echo "Please enter the following inputs to the corresponding prompts:"
+    echo "=================================="
+    echo "$keypassprompt pass"
+    echo "=================================="
     ./sendmsg $certA $keyA $tmp/$msg
     # expect $keypassprompt
     # send -- "$keypass\r"
